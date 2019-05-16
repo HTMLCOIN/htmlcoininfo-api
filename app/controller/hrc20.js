@@ -1,9 +1,9 @@
 const {Controller} = require('egg')
 
-class QRC20Controller extends Controller {
+class HRC20Controller extends Controller {
   async list() {
     const {ctx} = this
-    let {totalCount, tokens} = await ctx.service.qrc20.listQRC20Tokens()
+    let {totalCount, tokens} = await ctx.service.hrc20.listHRC20Tokens()
     ctx.body = {
       totalCount,
       tokens: tokens.map(item => ({
@@ -21,7 +21,7 @@ class QRC20Controller extends Controller {
 
   async richList() {
     const {ctx} = this
-    let {totalCount, list} = await ctx.service.qrc20.getQRC20TokenRichList(ctx.state.contract.contractAddress)
+    let {totalCount, list} = await ctx.service.hrc20.getHRC20TokenRichList(ctx.state.contract.contractAddress)
     ctx.body = {
       totalCount,
       list: list.map(item => ({
@@ -33,4 +33,4 @@ class QRC20Controller extends Controller {
   }
 }
 
-module.exports = QRC20Controller
+module.exports = HRC20Controller

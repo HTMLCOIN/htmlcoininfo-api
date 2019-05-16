@@ -1,9 +1,9 @@
 const {Controller} = require('egg')
 
-class QRC721Controller extends Controller {
+class HRC721Controller extends Controller {
   async list() {
     const {ctx} = this
-    let {totalCount, tokens} = await ctx.service.qrc721.listQRC721Tokens()
+    let {totalCount, tokens} = await ctx.service.hrc721.listHRC721Tokens()
     ctx.body = {
       totalCount,
       tokens: tokens.map(item => ({
@@ -18,4 +18,4 @@ class QRC721Controller extends Controller {
   }
 }
 
-module.exports = QRC721Controller
+module.exports = HRC721Controller

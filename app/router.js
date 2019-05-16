@@ -71,9 +71,9 @@ module.exports = app => {
     controller.address.balanceHistory
   )
   router.get(
-    '/address/:address/qrc20-balance-history',
+    '/address/:address/hrc20-balance-history',
     addressMiddleware, paginationMiddleware,
-    controller.address.qrc20BalanceHistory
+    controller.address.hrc20BalanceHistory
   )
 
   router.get(
@@ -92,9 +92,9 @@ module.exports = app => {
     controller.contract.balanceHistory
   )
   router.get(
-    '/contract/:contract/qrc20-balance-history',
+    '/contract/:contract/hrc20-balance-history',
     contractMiddleware, paginationMiddleware,
-    controller.contract.qrc20BalanceHistory
+    controller.contract.hrc20BalanceHistory
   )
   router.get(
     '/contract/:contract/call',
@@ -107,19 +107,19 @@ module.exports = app => {
     controller.contract.searchLogs
   )
   router.get(
-    '/qrc20',
+    '/hrc20',
     paginationMiddleware,
-    controller.qrc20.list
+    controller.hrc20.list
   )
   router.get(
-    '/qrc20/:contract/rich-list',
+    '/hrc20/:contract/rich-list',
     contractMiddleware, paginationMiddleware,
-    controller.qrc20.richList
+    controller.hrc20.richList
   )
   router.get(
-    '/qrc721',
+    '/hrc721',
     paginationMiddleware,
-    controller.qrc721.list
+    controller.hrc721.list
   )
 
   router.get(`/search`, controller.misc.classify)

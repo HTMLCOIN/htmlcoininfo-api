@@ -37,7 +37,7 @@ class InfoService extends Service {
 
   getCirculatingSupply(height) {
     let totalSupply = this.getTotalSupply(height)
-    if (this.app.config.qtum.chain === 'mainnet') {
+    if (this.app.config.htmlcoin.chain === 'mainnet') {
       return totalSupply - 575e4
     } else {
       return totalSupply
@@ -62,13 +62,13 @@ class InfoService extends Service {
   }
 
   async getFeeRate() {
-    let client = new this.app.qtuminfo.rpc(this.app.config.qtuminfo.rpc)
+    let client = new this.app.htmlcoininfo.rpc(this.app.config.htmlcoininfo.rpc)
     let info = await client.estimatesmartfee(10)
     return info.feerate
   }
 
   async getDGPInfo() {
-    let client = new this.app.qtuminfo.rpc(this.app.config.qtuminfo.rpc)
+    let client = new this.app.htmlcoininfo.rpc(this.app.config.htmlcoininfo.rpc)
     let info = await client.getdgpinfo()
     return {
       maxBlockSize: info.maxblocksize,

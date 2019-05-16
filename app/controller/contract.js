@@ -14,28 +14,28 @@ class ContractController extends Controller {
       owner: summary.owner,
       createTxId: summary.createTxId && summary.createTxId.toString('hex'),
       createHeight: summary.createHeight,
-      ...summary.type === 'qrc20' ? {
-        qrc20: {
-          name: summary.qrc20.name,
-          symbol: summary.qrc20.symbol,
-          decimals: summary.qrc20.decimals,
-          totalSupply: summary.qrc20.totalSupply.toString(),
-          version: summary.qrc20.version,
-          holders: summary.qrc20.holders
+      ...summary.type === 'hrc20' ? {
+        hrc20: {
+          name: summary.hrc20.name,
+          symbol: summary.hrc20.symbol,
+          decimals: summary.hrc20.decimals,
+          totalSupply: summary.hrc20.totalSupply.toString(),
+          version: summary.hrc20.version,
+          holders: summary.hrc20.holders
         }
       } : {},
-      ...summary.type === 'qrc721' ? {
-        qrc721: {
-          name: summary.qrc721.name,
-          symbol: summary.qrc721.symbol,
-          totalSupply: summary.qrc721.totalSupply.toString()
+      ...summary.type === 'hrc721' ? {
+        hrc721: {
+          name: summary.hrc721.name,
+          symbol: summary.hrc721.symbol,
+          totalSupply: summary.hrc721.totalSupply.toString()
         }
       } : {},
       balance: summary.balance.toString(),
       totalReceived: summary.totalReceived.toString(),
       totalSent: summary.totalSent.toString(),
       unconfirmed: summary.unconfirmed.toString(),
-      qrc20Balances: summary.qrc20Balances.map(item => ({
+      hrc20Balances: summary.hrc20Balances.map(item => ({
         address: item.address,
         addressHex: item.addressHex.toString('hex'),
         name: item.name,
@@ -43,7 +43,7 @@ class ContractController extends Controller {
         decimals: item.decimals,
         balance: item.balance.toString()
       })),
-      qrc721Balances: summary.qrc721Balances.map(item => ({
+      hrc721Balances: summary.hrc721Balances.map(item => ({
         address: item.address,
         addressHex: item.addressHex.toString('hex'),
         name: item.name,
@@ -83,9 +83,9 @@ class ContractController extends Controller {
     }
   }
 
-  async qrc20BalanceHistory() {
+  async hrc20BalanceHistory() {
     let {ctx} = this
-    let {totalCount, transactions} = await ctx.service.qrc20.getQRC20BalanceHistory([ctx.state.contract.contractAddress], null)
+    let {totalCount, transactions} = await ctx.service.hrc20.getHRC20BalanceHistory([ctx.state.contract.contractAddress], null)
     ctx.body = {
       totalCount,
       transactions: transactions.map(tx => ({
