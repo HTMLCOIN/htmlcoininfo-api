@@ -369,17 +369,17 @@ class TransactionService extends Service {
             addressHex: log.address,
             topics: this.transformTopics(log),
             data: log.data,
-            ...log.qrc20 ? {
-              qrc20: {
-                name: log.qrc20.name,
-                symbol: log.qrc20.symbol,
-                decimals: log.qrc20.decimals
+            ...log.hrc20 ? {
+              hrc20: {
+                name: log.hrc20.name,
+                symbol: log.hrc20.symbol,
+                decimals: log.hrc20.decimals
               }
             } : {},
-            ...log.qrc721 ? {
-              qrc721: {
-                name: log.qrc721.name,
-                symbol: log.qrc721.symbol
+            ...log.hrc721 ? {
+              hrc721: {
+                name: log.hrc721.name,
+                symbol: log.hrc721.symbol
               }
             } : {}
           }))
@@ -498,7 +498,7 @@ class TransactionService extends Service {
   }
 
   async getMempoolTransactionAddresses(id) {
-    const {Address: RawAddress} = this.app.qtuminfo.lib
+    const {Address: RawAddress} = this.app.htmlcoininfo.lib
     const {Address, Transaction, BalanceChange, EvmReceipt: EVMReceipt} = this.ctx.model
     let balanceChanges = await BalanceChange.findAll({
       attributes: [],
@@ -609,7 +609,7 @@ class TransactionService extends Service {
   }
 
   transformInput(input, index, transaction, {brief}) {
-    const {InputScript, OutputScript} = this.app.qtuminfo.lib
+    const {InputScript, OutputScript} = this.app.htmlcoininfo.lib
     let scriptSig = InputScript.fromBuffer(input.scriptSig, {
       scriptPubKey: OutputScript.fromBuffer(input.scriptPubKey || Buffer.alloc(0)),
       witness: input.witness,
@@ -704,19 +704,19 @@ class TransactionService extends Service {
     }
   }
 
-  async transformQRC20UnconfirmedTransfers(outputs) {
-    const {OutputScript, Solidity} = this.app.qtuminfo.lib
-    const transferABI = Solidity.qrc20ABIs.find(abi => abi.name === 'transfer')
-    const {Qrc20: QRC20} = this.ctx.model
+  async transformHRC20UnconfirmedTransfers(outputs) {
+    const {OutputScript, Solidity} = this.app.htmlcoininfo.lib
+    const transferABI = Solidity.hrc20ABIs.find(abi => abi.name === 'transfer')
+    const {Hrc20: HRC20} = this.ctx.model
     let result = []
     for (let output of outputs) {
       if (output.evmReceipt) {
-        let qrc20 = await QRC20.findOne({
+        let hrc20 = await HRC20.findOne({
           where: {contractAddress: output.addressHex},
           attributes: ['name', 'symbol', 'decimals'],
           transaction: this.ctx.state.transaction
         })
-        if (!qrc20) {
+        if (!hrc20) {
           continue
         }
         let scriptPubKey = OutputScript.fromBuffer(output.scriptPubKey)
@@ -736,9 +736,9 @@ class TransactionService extends Service {
         result.push({
           address: output.addressHex.toString('hex'),
           addressHex: output.addressHex.toString('hex'),
-          name: qrc20.name,
-          symbol: qrc20.symbol,
-          decimals: qrc20.decimals,
+          name: hrc20.name,
+          symbol: hrc20.symbol,
+          decimals: hrc20.decimals,
           from,
           ...to && typeof to === 'object' ? {to: to.string, toHex: to.hex.toString('hex')} : {to},
           value: value.toString()
@@ -895,7 +895,7 @@ class TransactionService extends Service {
   }
 
   async getContractTransaction(receiptId) {
-    const {Address: RawAddress, OutputScript} = this.app.qtuminfo.lib
+    const {Address: RawAddress, OutputScript} = this.app.htmlcoininfo.lib
     const {
       Header, Address, Transaction, TransactionOutput,
       EvmReceipt: EVMReceipt, EvmReceiptLog: EVMReceiptLog, Contract,

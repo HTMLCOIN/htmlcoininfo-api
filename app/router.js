@@ -68,9 +68,9 @@ module.exports = app => {
     controller.address.matureBalance
   )
   router.get(
-    '/address/:address/qrc20-balance/:token',
+    '/address/:address/hrc20-balance/:token',
     addressMiddleware, middleware.contract('token'),
-    controller.address.qrc20TokenBalance
+    controller.address.hrc20TokenBalance
   )
   router.get(
     '/address/:address/txs',
@@ -93,14 +93,14 @@ module.exports = app => {
     controller.address.contractTransactions
   )
   router.get(
-    '/address/:address/qrc20-txs/:token',
+    '/address/:address/hrc20-txs/:token',
     addressMiddleware, middleware.contract('token'), paginationMiddleware,
-    controller.address.qrc20TokenTransactions
+    controller.address.hrc20TokenTransactions
   )
   router.get(
-    '/address/:address/qrc20-mempool-txs/:token',
+    '/address/:address/hrc20-mempool-txs/:token',
     addressMiddleware, middleware.contract('token'),
-    controller.address.qrc20TokenMempoolTransactions
+    controller.address.hrc20TokenMempoolTransactions
   )
   router.get(
     '/address/:address/utxo',
@@ -118,9 +118,9 @@ module.exports = app => {
     controller.address.hrc20BalanceHistory
   )
   router.get(
-    '/address/:address/qrc20-balance-history/:token',
+    '/address/:address/hrc20-balance-history/:token',
     addressMiddleware, middleware.contract('token'), paginationMiddleware,
-    controller.address.qrc20BalanceHistory
+    controller.address.hrc20BalanceHistory
   )
 
   router.get(
@@ -149,9 +149,9 @@ module.exports = app => {
     controller.contract.hrc20BalanceHistory
   )
   router.get(
-    '/contract/:contract/qrc20-balance-history/:token',
+    '/contract/:contract/hrc20-balance-history/:token',
     contractMiddleware, middleware.contract('token'), paginationMiddleware,
-    controller.contract.qrc20BalanceHistory
+    controller.contract.hrc20BalanceHistory
   )
   router.get(
     '/contract/:contract/call',

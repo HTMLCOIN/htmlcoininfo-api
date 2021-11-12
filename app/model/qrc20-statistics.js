@@ -1,7 +1,7 @@
 module.exports = app => {
   const {INTEGER, CHAR} = app.Sequelize
 
-  let QRC20Statistics = app.model.define('qrc20_statistics', {
+  let HRC20Statistics = app.model.define('hrc20_statistics', {
     contractAddress: {
       type: CHAR(20).BINARY,
       primaryKey: true
@@ -10,11 +10,11 @@ module.exports = app => {
     transactions: INTEGER.UNSIGNED
   }, {freezeTableName: true, underscored: true, timestamps: false})
 
-  QRC20Statistics.associate = () => {
-    const {Qrc20: QRC20} = app.model
-    QRC20Statistics.belongsTo(QRC20, {as: 'qrc20', foreignKey: 'contractAddress'})
-    QRC20.hasOne(QRC20Statistics, {as: 'statistics', foreignKey: 'contractAddress'})
+  HRC20Statistics.associate = () => {
+    const {Hrc20: HRC20} = app.model
+    HRC20Statistics.belongsTo(HRC20, {as: 'hrc20', foreignKey: 'contractAddress'})
+    HRC20.hasOne(HRC20Statistics, {as: 'statistics', foreignKey: 'contractAddress'})
   }
 
-  return QRC20Statistics
+  return HRC20Statistics
 }

@@ -74,13 +74,13 @@ class AddressController extends Controller {
     ctx.body = unconfirmed.toString()
   }
 
-  async qrc20TokenBalance() {
+  async hrc20TokenBalance() {
     let {ctx} = this
     let {address, token} = ctx.state
-    if (token.type !== 'qrc20') {
+    if (token.type !== 'hrc20') {
       ctx.body = {}
     }
-    let {name, symbol, decimals, balance, unconfirmed} = await ctx.service.qrc20.getQRC20Balance(address.rawAddresses, token.contractAddress)
+    let {name, symbol, decimals, balance, unconfirmed} = await ctx.service.hrc20.getHRC20Balance(address.rawAddresses, token.contractAddress)
     ctx.body = {
       name,
       symbol,
@@ -160,10 +160,10 @@ class AddressController extends Controller {
     }
   }
 
-  async qrc20TokenTransactions() {
+  async hrc20TokenTransactions() {
     let {ctx} = this
     let {address, token} = ctx.state
-    let {totalCount, transactions} = await ctx.service.address.getAddressQRC20TokenTransactions(address.rawAddresses, token)
+    let {totalCount, transactions} = await ctx.service.address.getAddressHRC20TokenTransactions(address.rawAddresses, token)
     ctx.body = {
       totalCount,
       transactions: transactions.map(transaction => ({
@@ -183,10 +183,10 @@ class AddressController extends Controller {
     }
   }
 
-  async qrc20TokenMempoolTransactions() {
+  async hrc20TokenMempoolTransactions() {
     let {ctx} = this
     let {address, token} = ctx.state
-    let transactions = await ctx.service.address.getAddressQRC20TokenMempoolTransactions(address.rawAddresses, token)
+    let transactions = await ctx.service.address.getAddressHRC20TokenMempoolTransactions(address.rawAddresses, token)
     ctx.body = transactions.map(transaction => ({
       transactionId: transaction.transactionId.toString('hex'),
       outputIndex: transaction.outputIndex,

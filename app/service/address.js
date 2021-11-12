@@ -2,7 +2,7 @@ const {Service} = require('egg')
 
 class AddressService extends Service {
   async getAddressSummary(addressIds, p2pkhAddressIds, rawAddresses) {
-    const {Address} = this.ctx.app.qtuminfo.lib
+    const {Address} = this.ctx.app.htmlcoininfo.lib
     const {Block} = this.ctx.model
     const {balance: balanceService, hrc20: hrc20Service, hrc721: hrc721Service} = this.ctx.service
     const {in: $in, gt: $gt} = this.app.Sequelize.Op
@@ -214,9 +214,9 @@ class AddressService extends Service {
     return {totalCount, transactions}
   }
 
-  async getAddressQRC20TokenTransactionCount(rawAddresses, token) {
-    const {Address, Solidity} = this.app.qtuminfo.lib
-    const TransferABI = Solidity.qrc20ABIs.find(abi => abi.name === 'Transfer')
+  async getAddressHRC20TokenTransactionCount(rawAddresses, token) {
+    const {Address, Solidity} = this.app.htmlcoininfo.lib
+    const TransferABI = Solidity.hrc20ABIs.find(abi => abi.name === 'Transfer')
     const {EvmReceiptLog: EVMReceiptLog} = this.ctx.model
     const {or: $or, in: $in} = this.app.Sequelize.Op
     let topicAddresses = rawAddresses
@@ -235,9 +235,9 @@ class AddressService extends Service {
     })
   }
 
-  async getAddressQRC20TokenTransactions(rawAddresses, token) {
-    const {Address, Solidity} = this.app.qtuminfo.lib
-    const TransferABI = Solidity.qrc20ABIs.find(abi => abi.name === 'Transfer')
+  async getAddressHRC20TokenTransactions(rawAddresses, token) {
+    const {Address, Solidity} = this.app.htmlcoininfo.lib
+    const TransferABI = Solidity.hrc20ABIs.find(abi => abi.name === 'Transfer')
     const db = this.ctx.model
     const {sql} = this.ctx.helper
     let {limit, offset, reversed = true} = this.ctx.state.pagination
@@ -245,7 +245,7 @@ class AddressService extends Service {
     let topicAddresses = rawAddresses
       .filter(address => address.type === Address.PAY_TO_PUBLIC_KEY_HASH)
       .map(address => Buffer.concat([Buffer.alloc(12), address.data]))
-    let totalCount = await this.getAddressQRC20TokenTransactionCount(rawAddresses, token)
+    let totalCount = await this.getAddressHRC20TokenTransactionCount(rawAddresses, token)
     let transactions = await db.query(sql`
       SELECT
         transaction.id AS transactionId,
@@ -267,7 +267,7 @@ class AddressService extends Service {
       INNER JOIN evm_receipt receipt ON receipt._id = log.receipt_id
       INNER JOIN header ON header.height = receipt.block_height
       INNER JOIN transaction ON transaction._id = receipt.transaction_id
-      INNER JOIN qrc20 ON qrc20.contract_address = log.address
+      INNER JOIN hrc20 ON hrc20.contract_address = log.address
       ORDER BY list._id ${{raw: order}}
     `, {type: db.QueryTypes.SELECT, transaction: this.ctx.state.transaction})
 
@@ -304,9 +304,9 @@ class AddressService extends Service {
     }
   }
 
-  async getAddressQRC20TokenMempoolTransactions(rawAddresses, token) {
-    const {Address: RawAddress, OutputScript, Solidity} = this.app.qtuminfo.lib
-    const transferABI = Solidity.qrc20ABIs.find(abi => abi.name === 'transfer')
+  async getAddressHRC20TokenMempoolTransactions(rawAddresses, token) {
+    const {Address: RawAddress, OutputScript, Solidity} = this.app.htmlcoininfo.lib
+    const transferABI = Solidity.hrc20ABIs.find(abi => abi.name === 'transfer')
     const {Address, Transaction, TransactionOutput, Contract, EvmReceipt: EVMReceipt, where, col} = this.ctx.model
     let hexAddresses = rawAddresses
       .filter(address => address.type === RawAddress.PAY_TO_PUBLIC_KEY_HASH)
@@ -339,7 +339,7 @@ class AddressService extends Service {
               model: Contract,
               as: 'contract',
               required: true,
-              where: {address: token.contractAddress, type: 'qrc20'},
+              where: {address: token.contractAddress, type: 'hrc20'},
               attributes: []
             }]
           }]

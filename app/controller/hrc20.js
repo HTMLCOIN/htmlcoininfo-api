@@ -22,7 +22,7 @@ class HRC20Controller extends Controller {
 
   async allTransactions() {
     const {ctx} = this
-    let {totalCount, transactions} = await ctx.service.qrc20.getAllQRC20TokenTransactions()
+    let {totalCount, transactions} = await ctx.service.hrc20.getAllHRC20TokenTransactions()
     ctx.body = {
       totalCount,
       transactions: transactions.map(transaction => ({
@@ -47,8 +47,8 @@ class HRC20Controller extends Controller {
 
   async transactions() {
     const {ctx} = this
-    ctx.assert(ctx.state.token.type === 'qrc20', 404)
-    let {totalCount, transactions} = await ctx.service.qrc20.getQRC20TokenTransactions(ctx.state.token.contractAddress)
+    ctx.assert(ctx.state.token.type === 'hrc20', 404)
+    let {totalCount, transactions} = await ctx.service.hrc20.getHRC20TokenTransactions(ctx.state.token.contractAddress)
     ctx.body = {
       totalCount,
       transactions: transactions.map(transaction => ({

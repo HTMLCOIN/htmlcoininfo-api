@@ -3,7 +3,7 @@ const {Service} = require('egg')
 class HRC20Service extends Service {
   async listHRC20Tokens() {
     const db = this.ctx.model
-    const {Qrc20Statistics: QRC20Statistics} = db
+    const {Hrc20Statistics: HRC20Statistics} = db
     const {sql} = this.ctx.helper
     const {gt: $gt} = this.app.Sequelize.Op
     let {limit, offset} = this.ctx.state.pagination
@@ -632,18 +632,18 @@ class HRC20Service extends Service {
     }
   }
 
-  async updateQRC20Statistics() {
-    const TransferABI = this.app.qtuminfo.lib.Solidity.qrc20ABIs.find(abi => abi.name === 'Transfer')
+  async updateHRC20Statistics() {
+    const TransferABI = this.app.htmlcoininfo.lib.Solidity.hrc20ABIs.find(abi => abi.name === 'Transfer')
     const db = this.ctx.model
-    const {Qrc20: QRC20, Qrc20Statistics: QRC20Statistics} = db
+    const {Hrc20: HRC20, Hrc20Statistics: HRC20Statistics} = db
     const {sql} = this.ctx.helper
     let transaction = await db.transaction()
     try {
-      let result = (await QRC20.findAll({attributes: ['contractAddress'], transaction})).map(
+      let result = (await HRC20.findAll({attributes: ['contractAddress'], transaction})).map(
         ({contractAddress}) => ({contractAddress, holders: 0, transactions: 0})
       )
       let balanceResults = await db.query(sql`
-        SELECT contract_address AS contractAddress, COUNT(*) AS count FROM qrc20_balance
+        SELECT contract_address AS contractAddress, COUNT(*) AS count FROM hrc20_balance
         WHERE balance != ${Buffer.alloc(32)}
         GROUP BY contractAddress ORDER BY contractAddress
       `, {type: db.QueryTypes.SELECT, transaction})
@@ -686,8 +686,8 @@ class HRC20Service extends Service {
           }
         }
       }
-      await db.query(sql`DELETE FROM qrc20_statistics`, {transaction})
-      await QRC20Statistics.bulkCreate(result, {validate: false, transaction, logging: false})
+      await db.query(sql`DELETE FROM hrc20_statistics`, {transaction})
+      await HRC20Statistics.bulkCreate(result, {validate: false, transaction, logging: false})
       await transaction.commit()
     } catch (err) {
       await transaction.rollback()

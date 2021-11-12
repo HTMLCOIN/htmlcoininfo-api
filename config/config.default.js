@@ -36,7 +36,7 @@ exports.ratelimit = {
 exports.io = {
   redis: {
     ...redisConfig,
-    key: 'qtuminfo-api-socket.io'
+    key: 'htmlcoininfo-api-socket.io'
   },
   namespace: {
     '/': {connectionMiddleware: ['connection']}

@@ -13,9 +13,9 @@ module.exports = app => {
     await ctx.service.balance.updateRichList()
   })
 
-  app.messenger.on('update-qrc20-statistics', async () => {
+  app.messenger.on('update-hrc20-statistics', async () => {
     let ctx = app.createAnonymousContext()
-    await ctx.service.qrc20.updateQRC20Statistics()
+    await ctx.service.hrc20.updateHRC20Statistics()
   })
 
   app.messenger.on('update-daily-transactions', async () => {

@@ -46,7 +46,7 @@ class ContractService extends Service {
           required: false,
           attributes: ['name', 'symbol', 'decimals', 'totalSupply', 'version'],
           include: [{
-            model: QRC20Statistics,
+            model: HRC20Statistics,
             as: 'statistics',
             required: true
           }]
@@ -193,7 +193,7 @@ class ContractService extends Service {
   }
 
   async getContractBasicTransactions(contractAddress) {
-    const {Address, OutputScript} = this.app.qtuminfo.lib
+    const {Address, OutputScript} = this.app.htmlcoininfo.lib
     const {
       Header, Transaction, TransactionOutput, Contract, EvmReceipt: EVMReceipt, EvmReceiptLog: EVMReceiptLog,
       where, col
@@ -287,7 +287,7 @@ class ContractService extends Service {
   }
 
   async callContract(contract, data, sender) {
-    let client = new this.app.qtuminfo.rpc(this.app.config.qtuminfo.rpc)
+    let client = new this.app.htmlcoininfo.rpc(this.app.config.htmlcoininfo.rpc)
     return await client.callcontract(
       contract.toString('hex'),
       data.toString('hex'),
@@ -296,7 +296,7 @@ class ContractService extends Service {
   }
 
   async searchLogs({contract, topic1, topic2, topic3, topic4} = {}) {
-    const {Address} = this.app.qtuminfo.lib
+    const {Address} = this.app.htmlcoininfo.lib
     const db = this.ctx.model
     const {Header, Transaction, EvmReceipt: EVMReceipt, EvmReceiptLog: EVMReceiptLog, Contract} = db
     const {in: $in} = this.ctx.app.Sequelize.Op
