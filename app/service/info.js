@@ -42,11 +42,7 @@ class InfoService extends Service {
   getCirculatingSupply() {
     let height = this.app.blockchainInfo.tip.height
     let totalSupply = this.getTotalSupply(height)
-<<<<<<< HEAD
-    if (this.app.config.htmlcoin.chain === 'mainnet') {
-=======
     if (this.app.chain.name === 'mainnet') {
->>>>>>> 94f07a43e7021bb2e2f236da22cec97d6919b88b
       return totalSupply - 575e4
     } else {
       return totalSupply
@@ -70,14 +66,8 @@ class InfoService extends Service {
     return sum * 2 ** 32 * 16 / interval
   }
 
-<<<<<<< HEAD
-  async getFeeRate() {
-    let client = new this.app.htmlcoininfo.rpc(this.app.config.htmlcoininfo.rpc)
-    let info = await client.estimatesmartfee(10)
-    return info.feerate
-=======
   async getFeeRates() {
-    let client = new this.app.qtuminfo.rpc(this.app.config.qtuminfo.rpc)
+    let client = new this.app.htmlcoininfo.rpc(this.app.config.htmlcoininfo.rpc)
     let results = await Promise.all([2, 4, 6, 10, 12, 24].map(blocks => client.estimatesmartfee(blocks)))
     return [
       {blocks: 2, feeRate: results[0].feerate || 0.004},
@@ -87,7 +77,6 @@ class InfoService extends Service {
       {blocks: 12, feeRate: results[4].feerate || 0.004},
       {blocks: 24, feeRate: results[5].feerate || 0.004}
     ]
->>>>>>> 94f07a43e7021bb2e2f236da22cec97d6919b88b
   }
 
   async getDGPInfo() {

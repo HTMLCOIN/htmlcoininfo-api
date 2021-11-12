@@ -70,26 +70,14 @@ class MiscService extends Service {
         transaction
       })).map(hrc20 => hrc20.contractAddress)
     }
-<<<<<<< HEAD
     if (hrc20Results.length) {
-      let [{address, addressHex}] = await db.query(sql`
-        SELECT contract.address_string AS address, contract.address AS addressHex FROM (
-          SELECT contract_address, COUNT(*) AS holders FROM hrc20_balance
-          WHERE contract_address IN ${hrc20Results} AND balance != ${Buffer.alloc(32)}
-          GROUP BY contract_address
-          ORDER BY holders DESC LIMIT 1
-        ) hrc20_balance
-        INNER JOIN contract ON contract.address = hrc20_balance.contract_address
-=======
-    if (qrc20Results.length) {
       let [{addressHex}] = await db.query(sql`
         SELECT contract.address_string AS address, contract.address AS addressHex FROM (
-          SELECT contract_address FROM qrc20_statistics
-          WHERE contract_address IN ${qrc20Results}
+          SELECT contract_address FROM hrc20_statistics
+          WHERE contract_address IN ${hrc20Results}
           ORDER BY transactions DESC LIMIT 1
-        ) qrc20_balance
-        INNER JOIN contract ON contract.address = qrc20_balance.contract_address
->>>>>>> 94f07a43e7021bb2e2f236da22cec97d6919b88b
+        ) hrc20_balance
+        INNER JOIN contract ON contract.address = hrc20_balance.contract_address
       `, {type: db.QueryTypes.SELECT, transaction})
       return {type: 'contract', address: addressHex.toString('hex'), addressHex: addressHex.toString('hex')}
     }

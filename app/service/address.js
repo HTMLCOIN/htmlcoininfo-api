@@ -43,14 +43,9 @@ class AddressService extends Service {
     }
   }
 
-<<<<<<< HEAD
-  async getAddressTransactionCount(addressIds, hexAddresses) {
-    const TransferABI = this.app.htmlcoininfo.lib.Solidity.hrc20ABIs.find(abi => abi.name === 'Transfer')
-=======
   async getAddressTransactionCount(addressIds, rawAddresses) {
-    const {Address: RawAddress, Solidity} = this.app.qtuminfo.lib
-    const TransferABI = Solidity.qrc20ABIs.find(abi => abi.name === 'Transfer')
->>>>>>> 94f07a43e7021bb2e2f236da22cec97d6919b88b
+    const {Address: RawAddress, Solidity} = this.app.htmlcoininfo.lib
+    const TransferABI = Solidity.hrc20ABIs.find(abi => abi.name === 'Transfer')
     const db = this.ctx.model
     const {Address} = db
     const {sql} = this.ctx.helper
@@ -62,16 +57,6 @@ class AddressService extends Service {
         SELECT transaction_id FROM balance_change
         WHERE address_id IN ${addressIds} AND ${this.ctx.service.block.getRawBlockFilter()}
         UNION
-<<<<<<< HEAD
-        SELECT receipt.transaction_id AS transaction_id FROM receipt, receipt_log, contract
-        WHERE receipt._id = receipt_log.receipt_id
-          AND contract.address = receipt_log.address AND contract.type IN ('hrc20', 'hrc721')
-          AND receipt_log.topic1 = ${TransferABI.id}
-          AND (receipt_log.topic2 IN ${topics} OR receipt_log.topic3 IN ${topics})
-          AND (
-            (contract.type = 'hrc20' AND receipt_log.topic3 IS NOT NULL AND receipt_log.topic4 IS NULL)
-            OR (contract.type = 'hrc721' AND receipt_log.topic4 IS NOT NULL)
-=======
         SELECT transaction_id FROM evm_receipt
         WHERE (sender_type, sender_data) IN ${rawAddresses.map(address => [Address.parseType(address.type), address.data])}
           AND ${this.ctx.service.block.getRawBlockFilter()}
@@ -79,27 +64,21 @@ class AddressService extends Service {
         SELECT receipt.transaction_id AS transaction_id FROM evm_receipt receipt, evm_receipt_log log, contract
         WHERE receipt._id = log.receipt_id
           AND ${this.ctx.service.block.getRawBlockFilter('receipt.block_height')}
-          AND contract.address = log.address AND contract.type IN ('qrc20', 'qrc721')
+          AND contract.address = log.address AND contract.type IN ('hrc20', 'hrc721')
           AND log.topic1 = ${TransferABI.id}
           AND (log.topic2 IN ${topics} OR log.topic3 IN ${topics})
           AND (
-            (contract.type = 'qrc20' AND log.topic3 IS NOT NULL AND log.topic4 IS NULL)
-            OR (contract.type = 'qrc721' AND log.topic4 IS NOT NULL)
->>>>>>> 94f07a43e7021bb2e2f236da22cec97d6919b88b
+            (contract.type = 'hrc20' AND log.topic3 IS NOT NULL AND log.topic4 IS NULL)
+            OR (contract.type = 'hrc721' AND log.topic4 IS NOT NULL)
           )
       ) list
     `, {type: db.QueryTypes.SELECT, transaction: this.ctx.state.transaction})
     return count
   }
 
-<<<<<<< HEAD
-  async getAddressTransactions(addressIds, hexAddresses) {
-    const TransferABI = this.app.htmlcoininfo.lib.Solidity.hrc20ABIs.find(abi => abi.name === 'Transfer')
-=======
   async getAddressTransactions(addressIds, rawAddresses) {
-    const {Address: RawAddress, Solidity} = this.app.qtuminfo.lib
-    const TransferABI = Solidity.qrc20ABIs.find(abi => abi.name === 'Transfer')
->>>>>>> 94f07a43e7021bb2e2f236da22cec97d6919b88b
+    const {Address: RawAddress, Solidity} = this.app.htmlcoininfo.lib
+    const TransferABI = Solidity.hrc20ABIs.find(abi => abi.name === 'Transfer')
     const db = this.ctx.model
     const {Address} = db
     const {sql} = this.ctx.helper
@@ -121,26 +100,15 @@ class AddressService extends Service {
             AND ${this.ctx.service.block.getRawBlockFilter()}
           UNION
           SELECT receipt.block_height AS block_height, receipt.index_in_block AS index_in_block, receipt.transaction_id AS _id
-<<<<<<< HEAD
-          FROM receipt, receipt_log, contract
-          WHERE receipt._id = receipt_log.receipt_id
-            AND contract.address = receipt_log.address AND contract.type IN ('hrc20', 'hrc721')
-            AND receipt_log.topic1 = ${TransferABI.id}
-            AND (receipt_log.topic2 IN ${topics} OR receipt_log.topic3 IN ${topics})
-            AND (
-              (contract.type = 'hrc20' AND receipt_log.topic3 IS NOT NULL AND receipt_log.topic4 IS NULL)
-              OR (contract.type = 'hrc721' AND receipt_log.topic4 IS NOT NULL)
-=======
           FROM evm_receipt receipt, evm_receipt_log log, contract
           WHERE receipt._id = log.receipt_id
             AND ${this.ctx.service.block.getRawBlockFilter('receipt.block_height')}
-            AND contract.address = log.address AND contract.type IN ('qrc20', 'qrc721')
+            AND contract.address = log.address AND contract.type IN ('hrc20', 'hrc721')
             AND log.topic1 = ${TransferABI.id}
             AND (log.topic2 IN ${topics} OR log.topic3 IN ${topics})
             AND (
-              (contract.type = 'qrc20' AND log.topic3 IS NOT NULL AND log.topic4 IS NULL)
-              OR (contract.type = 'qrc721' AND log.topic4 IS NOT NULL)
->>>>>>> 94f07a43e7021bb2e2f236da22cec97d6919b88b
+              (contract.type = 'hrc20' AND log.topic3 IS NOT NULL AND log.topic4 IS NULL)
+              OR (contract.type = 'hrc721' AND log.topic4 IS NOT NULL)
             )
         ) list
         ORDER BY block_height ${{raw: order}}, index_in_block ${{raw: order}}, _id ${{raw: order}}

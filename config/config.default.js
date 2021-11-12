@@ -1,9 +1,6 @@
 const path = require('path')
 const Redis = require('ioredis')
 
-<<<<<<< HEAD
-exports.keys = 'htmlcoininfo-api-mainnet'
-=======
 const redisConfig = {
   host: 'localhost',
   port: 6379,
@@ -11,8 +8,7 @@ const redisConfig = {
   db: 0
 }
 
-exports.keys = 'qtuminfo-api'
->>>>>>> 94f07a43e7021bb2e2f236da22cec97d6919b88b
+exports.keys = 'htmlcoininfo-api'
 
 exports.security = {
   csrf: {enable: false}
@@ -32,10 +28,6 @@ exports.ratelimit = {
     total: 'Rate-Limit-Total',
   },
   disableHeader: false,
-<<<<<<< HEAD
-  id: ctx => `htmlcoininfo-api-mainnet-${ctx.get('x-forwarded-for') || ctx.ip}`,
-=======
->>>>>>> 94f07a43e7021bb2e2f236da22cec97d6919b88b
   errorMessage: 'Rate Limit Exceeded',
   duration: 10 * 60 * 1000,
   max: 10 * 60

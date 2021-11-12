@@ -4,14 +4,9 @@ class TransactionService extends Service {
   async getTransaction(id) {
     const {
       Header, Address,
-<<<<<<< HEAD
-      Transaction, Witness, TransactionOutput, GasRefund, Receipt, ReceiptLog, ContractSpend,
-      Contract, Hrc20: HRC20, Hrc721: HRC721,
-=======
       Transaction, Witness, TransactionOutput, TransactionInput, GasRefund,
       EvmReceipt: EVMReceipt, EvmReceiptLog: EVMReceiptLog, ContractSpend,
-      Contract, Qrc20: QRC20, Qrc721: QRC721,
->>>>>>> 94f07a43e7021bb2e2f236da22cec97d6919b88b
+      Contract, Hrc20: HRC20, Hrc721: HRC721,
       where, col
     } = this.ctx.model
     const {in: $in} = this.app.Sequelize.Op
@@ -353,34 +348,6 @@ class TransactionService extends Service {
           outputObject.refundIndex = output.refund.refundIndex
           outputObject.refundValue = output.refund.refundTo.value
         }
-<<<<<<< HEAD
-        outputObject.isRefund = Boolean(output.refundTo)
-        if (output.receipt) {
-          outputObject.receipt = {
-            gasUsed: output.receipt.gasUsed,
-            contractAddress: output.receipt.contract.addressString,
-            contractAddressHex: output.receipt.contractAddress,
-            excepted: output.receipt.excepted,
-            logs: eventLogs.filter(log => log.receiptId === output.receipt._id).map(log => ({
-              address: log.contract.addressString,
-              addressHex: log.address,
-              topics: this.transformTopics(log),
-              data: log.data,
-              ...log.hrc20 ? {
-                hrc20: {
-                  name: log.hrc20.name,
-                  symbol: log.hrc20.symbol,
-                  decimals: log.hrc20.decimals
-                }
-              } : {},
-              ...log.hrc721 ? {
-                hrc721: {
-                  name: log.hrc721.name,
-                  symbol: log.hrc721.symbol
-                }
-              } : {}
-            }))
-=======
         if (output.refundTo) {
           outputObject.isRefund = true
         }
@@ -396,7 +363,6 @@ class TransactionService extends Service {
             contractAddressHex: output.evmReceipt.contractAddress,
             excepted: output.evmReceipt.excepted,
             exceptedMessage: output.evmReceipt.exceptedMessage
->>>>>>> 94f07a43e7021bb2e2f236da22cec97d6919b88b
           }
           outputObject.evmReceipt.logs = eventLogs.filter(log => log.receiptId === output.evmReceipt._id).map(log => ({
             address: log.address.toString('hex'),
@@ -436,13 +402,8 @@ class TransactionService extends Service {
   }
 
   async getRawTransaction(id) {
-<<<<<<< HEAD
-    const {Transaction, Witness, TransactionOutput} = this.ctx.model
-    const {Transaction: RawTransaction, Input, Output, Script} = this.app.htmlcoininfo.lib
-=======
     const {Transaction, Witness, TransactionOutput, TransactionInput} = this.ctx.model
-    const {Transaction: RawTransaction, Input, Output, OutputScript} = this.app.qtuminfo.lib
->>>>>>> 94f07a43e7021bb2e2f236da22cec97d6919b88b
+    const {Transaction: RawTransaction, Input, Output, OutputScript} = this.app.htmlcoininfo.lib
 
     let transaction = await Transaction.findOne({
       where: {id},
@@ -597,16 +558,10 @@ class TransactionService extends Service {
     let inputs = transaction.inputs.map((input, index) => this.transformInput(input, index, transaction, {brief}))
     let outputs = transaction.outputs.map((output, index) => this.transformOutput(output, index, {brief}))
 
-<<<<<<< HEAD
-    let [hrc20TokenTransfers, hrc721TokenTransfers] = await Promise.all([
+    let [hrc20TokenTransfers, hrc20TokenUnconfirmedTransfers, hrc721TokenTransfers] = await Promise.all([
       this.transformHRC20Transfers(transaction.outputs),
+      confirmations === 0 ? this.transformHRC20UnconfirmedTransfers(transaction.outputs) : undefined,
       this.transformHRC721Transfers(transaction.outputs)
-=======
-    let [qrc20TokenTransfers, qrc20TokenUnconfirmedTransfers, qrc721TokenTransfers] = await Promise.all([
-      this.transformQRC20Transfers(transaction.outputs),
-      confirmations === 0 ? this.transformQRC20UnconfirmedTransfers(transaction.outputs) : undefined,
-      this.transformQRC721Transfers(transaction.outputs)
->>>>>>> 94f07a43e7021bb2e2f236da22cec97d6919b88b
     ])
 
     return {
@@ -647,27 +602,9 @@ class TransactionService extends Service {
           }))
           : undefined
       },
-<<<<<<< HEAD
-      contractSpendSource: transaction.contractSpendSource && transaction.contractSpendSource.toString('hex'),
-      contractSpends: transaction.contractSpends.map(({inputs, outputs}) => ({
-        inputs: inputs.map(input => ({
-          address: input.address,
-          addressHex: input.addressHex.toString('hex'),
-          value: input.value.toString()
-        })),
-        outputs: outputs.map(output => ({
-          address: output.address,
-          addressHex: output.addressHex && output.addressHex.toString('hex'),
-          value: output.value.toString()
-        }))
-      })),
       hrc20TokenTransfers,
+      hrc20TokenUnconfirmedTransfers,
       hrc721TokenTransfers
-=======
-      qrc20TokenTransfers,
-      qrc20TokenUnconfirmedTransfers,
-      qrc721TokenTransfers
->>>>>>> 94f07a43e7021bb2e2f236da22cec97d6919b88b
     }
   }
 
@@ -689,29 +626,6 @@ class TransactionService extends Service {
       result.addressHex = input.addressHex && input.addressHex.toString('hex')
       result.isInvalidContract = input.isInvalidContract
     }
-<<<<<<< HEAD
-    return result
-  }
-
-  transformInput(input, index, {brief}) {
-    return {
-      prevTxId: input.prevTxId.toString('hex'),
-      value: input.value.toString(),
-      address: input.address,
-      addressHex: input.addressHex && input.addressHex.toString('hex'),
-      ...brief ? {} : {
-        outputIndex: input.outputIndex,
-        sequence: input.sequence,
-        index,
-        scriptSig: {
-          hex: input.scriptSig.toString('hex'),
-          asm: this.app.htmlcoininfo.lib.Script.fromBuffer(
-            input.scriptSig,
-            {isCoinbase: this.isCoinbase(input), isInput: true}
-          ).toString()
-        }
-      }
-=======
     result.scriptSig = {type: scriptSig.type}
     if (!brief) {
       result.scriptSig.hex = input.scriptSig.toString('hex')
@@ -720,33 +634,14 @@ class TransactionService extends Service {
     }
     if (transaction.flag) {
       result.witness = input.witness.map(script => script.toString('hex'))
->>>>>>> 94f07a43e7021bb2e2f236da22cec97d6919b88b
     }
     return result
   }
 
   transformOutput(output, index, {brief}) {
-<<<<<<< HEAD
-    const {Script} = this.app.htmlcoininfo.lib
-    let scriptPubKey = Script.fromBuffer(output.scriptPubKey, {isOutput: true})
-    let type = {
-      [Script.UNKNOWN]: 'nonstandard',
-      [Script.PUBKEY_OUT]: 'pubkey',
-      [Script.PUBKEYHASH_OUT]: 'pubkeyhash',
-      [Script.SCRIPT_OUT]: 'scripthash',
-      [Script.MULTISIG_OUT]: 'multisig',
-      [Script.DATA_OUT]: 'nulldata',
-      [Script.WITNESS_V0_KEYHASH]: 'witness_v0_keyhash',
-      [Script.WITNESS_V0_SCRIPTHASH]: 'witness_v0_scripthash',
-      [Script.EVM_CONTRACT_CREATE]: 'create',
-      [Script.EVM_CONTRACT_CALL]: 'call',
-      [Script.CONTRACT_OUT]: 'call',
-    }[scriptPubKey.type]
-=======
-    const {OutputScript} = this.app.qtuminfo.lib
+    const {OutputScript} = this.app.htmlcoininfo.lib
     let scriptPubKey = OutputScript.fromBuffer(output.scriptPubKey)
     let type = scriptPubKey.isEmpty() ? 'empty' : scriptPubKey.type
->>>>>>> 94f07a43e7021bb2e2f236da22cec97d6919b88b
     let result = {
       value: output.value.toString(),
       address: output.addressHex ? output.addressHex.toString('hex') : output.address,
@@ -786,32 +681,18 @@ class TransactionService extends Service {
     const TransferABI = this.app.htmlcoininfo.lib.Solidity.hrc20ABIs.find(abi => abi.name === 'Transfer')
     let result = []
     for (let output of outputs) {
-<<<<<<< HEAD
-      if (output.receipt) {
-        for (let {address, addressHex, topics, data, hrc20} of output.receipt.logs) {
-          if (hrc20 && topics.length === 3 && Buffer.compare(topics[0], TransferABI.id) === 0 && data.length === 32) {
-=======
       if (output.evmReceipt) {
-        for (let {addressHex, topics, data, qrc20} of output.evmReceipt.logs) {
-          if (qrc20 && topics.length === 3 && Buffer.compare(topics[0], TransferABI.id) === 0 && data.length === 32) {
->>>>>>> 94f07a43e7021bb2e2f236da22cec97d6919b88b
+        for (let {addressHex, topics, data, hrc20} of output.evmReceipt.logs) {
+          if (hrc20 && topics.length === 3 && Buffer.compare(topics[0], TransferABI.id) === 0 && data.length === 32) {
             let [from, to] = await this.ctx.service.contract.transformHexAddresses([topics[1].slice(12), topics[2].slice(12)])
             result.push({
               address: addressHex.toString('hex'),
               addressHex: addressHex.toString('hex'),
-<<<<<<< HEAD
               name: hrc20.name,
               symbol: hrc20.symbol,
               decimals: hrc20.decimals,
-              ...from && typeof from === 'object' ? {from: from.string, fromHex: from.hex.toString('hex')} : {from},
-              ...to && typeof to === 'object' ? {to: to.string, toHex: to.hex.toString('hex')} : {to},
-=======
-              name: qrc20.name,
-              symbol: qrc20.symbol,
-              decimals: qrc20.decimals,
               ...from && typeof from === 'object' ? {from: from.hex.toString('hex'), fromHex: from.hex.toString('hex')} : {from},
               ...to && typeof to === 'object' ? {to: to.hex.toString('hex'), toHex: to.hex.toString('hex')} : {to},
->>>>>>> 94f07a43e7021bb2e2f236da22cec97d6919b88b
               value: BigInt(`0x${data.toString('hex')}`).toString()
             })
           }
@@ -873,30 +754,17 @@ class TransactionService extends Service {
     const TransferABI = this.app.htmlcoininfo.lib.Solidity.hrc20ABIs.find(abi => abi.name === 'Transfer')
     let result = []
     for (let output of outputs) {
-<<<<<<< HEAD
-      if (output.receipt) {
-        for (let {address, addressHex, topics, hrc721} of output.receipt.logs) {
-          if (hrc721 && topics.length === 4 && Buffer.compare(topics[0], TransferABI.id) === 0) {
-=======
       if (output.evmReceipt) {
-        for (let {addressHex, topics, qrc721} of output.evmReceipt.logs) {
-          if (qrc721 && topics.length === 4 && Buffer.compare(topics[0], TransferABI.id) === 0) {
->>>>>>> 94f07a43e7021bb2e2f236da22cec97d6919b88b
+        for (let {addressHex, topics, hrc721} of output.evmReceipt.logs) {
+          if (hrc721 && topics.length === 4 && Buffer.compare(topics[0], TransferABI.id) === 0) {
             let [from, to] = await this.ctx.service.contract.transformHexAddresses([topics[1].slice(12), topics[2].slice(12)])
             result.push({
               address: addressHex.toString('hex'),
               addressHex: addressHex.toString('hex'),
-<<<<<<< HEAD
               name: hrc721.name,
               symbol: hrc721.symbol,
-              ...from && typeof from === 'object' ? {from: from.string, fromHex: from.hex.toString('hex')} : {from},
-              ...to && typeof to === 'object' ? {to: to.string, toHex: to.hex.toString('hex')} : {to},
-=======
-              name: qrc721.name,
-              symbol: qrc721.symbol,
               ...from && typeof from === 'object' ? {from: from.hex.toString('hex'), fromHex: from.hex.toString('hex')} : {from},
               ...to && typeof to === 'object' ? {to: to.hex.toString('hex'), toHex: to.hex.toString('hex')} : {to},
->>>>>>> 94f07a43e7021bb2e2f236da22cec97d6919b88b
               tokenId: topics[3].toString('hex')
             })
           }

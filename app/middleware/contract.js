@@ -1,12 +1,6 @@
-<<<<<<< HEAD
-module.exports = () => async function contract(ctx, next) {
-  ctx.assert(ctx.params.contract, 404)
-  const {Address: RawAddress} = ctx.app.htmlcoininfo.lib
-=======
 module.exports = (paramName = 'contract') => async function contract(ctx, next) {
   ctx.assert(ctx.params[paramName], 404)
-  const {Address: RawAddress} = ctx.app.qtuminfo.lib
->>>>>>> 94f07a43e7021bb2e2f236da22cec97d6919b88b
+  const {Address: RawAddress} = ctx.app.htmlcoininfo.lib
   const chain = ctx.app.chain
   const {Address, Contract} = ctx.model
   const {gte: $gte} = ctx.app.Sequelize.Op

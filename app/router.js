@@ -169,25 +169,19 @@ module.exports = app => {
     controller.hrc20.list
   )
   router.get(
-<<<<<<< HEAD
-    '/hrc20/:contract/rich-list',
-    contractMiddleware, paginationMiddleware,
-    controller.hrc20.richList
-=======
-    '/qrc20/txs',
+    '/hrc20/txs',
     paginationMiddleware,
-    controller.qrc20.allTransactions
+    controller.hrc20.allTransactions
   )
   router.get(
-    '/qrc20/:token/txs',
+    '/hrc20/:token/txs',
     middleware.contract('token'), paginationMiddleware, blockFilterMiddleware,
-    controller.qrc20.transactions
+    controller.hrc20.transactions
   )
   router.get(
-    '/qrc20/:token/rich-list',
+    '/hrc20/:token/rich-list',
     middleware.contract('token'), paginationMiddleware,
-    controller.qrc20.richList
->>>>>>> 94f07a43e7021bb2e2f236da22cec97d6919b88b
+    controller.hrc20.richList
   )
   router.get(
     '/hrc721',
