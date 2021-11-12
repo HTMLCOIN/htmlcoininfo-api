@@ -1,8 +1,7 @@
 {
   "parser": "babel-eslint",
   "parserOptions": {
-    "ecmaVersion": 2018,
-    "sourceType": "module"
+    "ecmaVersion": 2018
   },
   "env": {
     "es6": true,
@@ -16,8 +15,10 @@
     "for-direction": "error",
     "getter-return": "warn",
     "no-console": "off",
+    "no-constant-condition": ["warn", {"checkLoops": false}],
     "no-empty": ["warn", {"allowEmptyCatch": true}],
     "no-extra-parens": "warn",
+    "require-atomic-updates": "off",
     "curly": ["error", "multi-line"],
     "dot-notation": "warn",
     "eqeqeq": ["error", "smart"],
@@ -58,6 +59,7 @@
     "no-new-require": "error",
     "no-path-concat": "warn",
     "array-bracket-newline": ["warn", "consistent"],
+    "array-bracket-spacing": "warn",
     "brace-style": ["warn", "1tbs", {"allowSingleLine": true}],
     "camelcase": "warn",
     "comma-spacing": "warn",

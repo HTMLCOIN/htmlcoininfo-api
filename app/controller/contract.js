@@ -7,13 +7,10 @@ class ContractController extends Controller {
       ctx.state.contract.contractAddress, ctx.state.contract.addressIds
     )
     ctx.body = {
-      address: summary.address,
+      address: summary.addressHex.toString('hex'),
       addressHex: summary.addressHex.toString('hex'),
       vm: summary.vm,
       type: summary.type,
-      owner: summary.owner,
-      createTxId: summary.createTxId && summary.createTxId.toString('hex'),
-      createHeight: summary.createHeight,
       ...summary.type === 'hrc20' ? {
         hrc20: {
           name: summary.hrc20.name,
@@ -21,7 +18,8 @@ class ContractController extends Controller {
           decimals: summary.hrc20.decimals,
           totalSupply: summary.hrc20.totalSupply.toString(),
           version: summary.hrc20.version,
-          holders: summary.hrc20.holders
+          holders: summary.hrc20.holders,
+          transactions: summary.hrc20.transactions
         }
       } : {},
       ...summary.type === 'hrc721' ? {
@@ -36,7 +34,7 @@ class ContractController extends Controller {
       totalSent: summary.totalSent.toString(),
       unconfirmed: summary.unconfirmed.toString(),
       hrc20Balances: summary.hrc20Balances.map(item => ({
-        address: item.address,
+        address: item.addressHex.toString('hex'),
         addressHex: item.addressHex.toString('hex'),
         name: item.name,
         symbol: item.symbol,
@@ -44,7 +42,7 @@ class ContractController extends Controller {
         balance: item.balance.toString()
       })),
       hrc721Balances: summary.hrc721Balances.map(item => ({
-        address: item.address,
+        address: item.addressHex.toString('hex'),
         addressHex: item.addressHex.toString('hex'),
         name: item.name,
         symbol: item.symbol,
@@ -62,6 +60,39 @@ class ContractController extends Controller {
     ctx.body = {
       totalCount,
       transactions: transactions.map(id => id.toString('hex'))
+    }
+  }
+
+  async basicTransactions() {
+    let {ctx} = this
+    let {totalCount, transactions} = await ctx.service.contract.getContractBasicTransactions(ctx.state.contract.contractAddress)
+    ctx.body = {
+      totalCount,
+      transactions: transactions.map(transaction => ({
+        transactionId: transaction.transactionId.toString('hex'),
+        outputIndex: transaction.outputIndex,
+        blockHeight: transaction.blockHeight,
+        blockHash: transaction.blockHash && transaction.blockHash.toString('hex'),
+        timestamp: transaction.timestamp,
+        confirmations: transaction.confirmations,
+        type: transaction.scriptPubKey.type,
+        gasLimit: transaction.scriptPubKey.gasLimit,
+        gasPrice: transaction.scriptPubKey.gasPrice,
+        byteCode: transaction.scriptPubKey.byteCode.toString('hex'),
+        outputValue: transaction.value.toString(),
+        sender: transaction.sender.toString(),
+        gasUsed: transaction.gasUsed,
+        contractAddress: transaction.contractAddressHex.toString('hex'),
+        contractAddressHex: transaction.contractAddressHex.toString('hex'),
+        excepted: transaction.excepted,
+        exceptedMessage: transaction.exceptedMessage,
+        evmLogs: transaction.evmLogs.map(log => ({
+          address: log.addressHex.toString('hex'),
+          addressHex: log.addressHex.toString('hex'),
+          topics: log.topics.map(topic => topic.toString('hex')),
+          data: log.data.toString('hex')
+        }))
+      }))
     }
   }
 
@@ -85,7 +116,19 @@ class ContractController extends Controller {
 
   async hrc20BalanceHistory() {
     let {ctx} = this
-    let {totalCount, transactions} = await ctx.service.hrc20.getHRC20BalanceHistory([ctx.state.contract.contractAddress], null)
+    let tokenAddress = null
+    if (ctx.state.token) {
+      if (ctx.state.token.type === 'hrc20') {
+        tokenAddress = ctx.state.token.contractAddress
+      } else {
+        ctx.body = {
+          totalCount: 0,
+          transactions: []
+        }
+        return
+      }
+    }
+    let {totalCount, transactions} = await ctx.service.hrc20.getHRC20BalanceHistory([ctx.state.contract.contractAddress], tokenAddress)
     ctx.body = {
       totalCount,
       transactions: transactions.map(tx => ({
@@ -94,7 +137,7 @@ class ContractController extends Controller {
         height: tx.block.height,
         timestamp: tx.block.timestamp,
         tokens: tx.tokens.map(item => ({
-          address: item.address,
+          address: item.addressHex.toString('hex'),
           addressHex: item.addressHex.toString('hex'),
           name: item.name,
           symbol: item.symbol,
@@ -107,30 +150,29 @@ class ContractController extends Controller {
   }
 
   async callContract() {
+    const {Address} = this.app.qtuminfo.lib
     let {ctx} = this
-    let data = ctx.query.data
+    let {data, sender} = ctx.query
     ctx.assert(ctx.state.contract.vm === 'evm', 400)
     ctx.assert(/^([0-9a-f]{2})+$/i.test(data), 400)
-    ctx.body = await ctx.service.contract.callContract(ctx.state.contract.contractAddress, data)
+    if (sender != null) {
+      try {
+        let address = Address.fromString(sender, this.app.chain)
+        if ([Address.PAY_TO_PUBLIC_KEY_HASH, Address.CONTRACT, Address.EVM_CONTRACT].includes(address.type)) {
+          sender = address.data
+        } else {
+          ctx.throw(400)
+        }
+      } catch (err) {
+        ctx.throw(400)
+      }
+    }
+    ctx.body = await ctx.service.contract.callContract(ctx.state.contract.contractAddress, data, sender)
   }
 
   async searchLogs() {
     let {ctx} = this
-    let {fromBlock, toBlock, contract, topic1, topic2, topic3, topic4} = this.ctx.query
-    if (fromBlock != null) {
-      if (/^(0|[1-9]\d{0,9})$/.test(fromBlock)) {
-        fromBlock = Number.parseInt(fromBlock)
-      } else {
-        ctx.throw(400)
-      }
-    }
-    if (toBlock != null) {
-      if (/^(0|[1-9]\d{0,9})$/.test(toBlock)) {
-        toBlock = Number.parseInt(toBlock)
-      } else {
-        ctx.throw(400)
-      }
-    }
+    let {contract, topic1, topic2, topic3, topic4} = this.ctx.query
     if (contract != null) {
       contract = (await ctx.service.contract.getContractAddresses([contract]))[0]
     }
@@ -163,22 +205,21 @@ class ContractController extends Controller {
       }
     }
 
-    let {totalCount, logs} = await ctx.service.contract.searchLogs({fromBlock, toBlock, contract, topic1, topic2, topic3, topic4})
+    let {totalCount, logs} = await ctx.service.contract.searchLogs({contract, topic1, topic2, topic3, topic4})
     ctx.body = {
       totalCount,
       logs: logs.map(log => ({
+        transactionId: log.transactionId.toString('hex'),
+        outputIndex: log.outputIndex,
         blockHash: log.blockHash.toString('hex'),
         blockHeight: log.blockHeight,
         timestamp: log.timestamp,
-        transactionId: log.transactionId.toString('hex'),
-        contractAddress: log.contractAddress,
+        sender: log.sender.toString(),
+        contractAddress: log.contractAddressHex.toString('hex'),
         contractAddressHex: log.contractAddressHex.toString('hex'),
-        address: log.address,
+        address: log.addressHex.toString('hex'),
         addressHex: log.addressHex.toString('hex'),
-        topic1: log.topic1 && log.topic1.toString('hex'),
-        topic2: log.topic2 && log.topic2.toString('hex'),
-        topic3: log.topic3 && log.topic3.toString('hex'),
-        topic4: log.topic4 && log.topic4.toString('hex'),
+        topics: log.topics.map(topic => topic.toString('hex')),
         data: log.data.toString('hex')
       }))
     }

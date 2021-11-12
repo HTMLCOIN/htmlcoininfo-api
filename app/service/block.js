@@ -116,23 +116,51 @@ class BlockService extends Service {
     })
   }
 
-  async listBlocks(min, max) {
+  async listBlocks(dateFilter) {
     const db = this.ctx.model
     const {sql} = this.ctx.helper
-    let blocks = await db.query(sql`
-      SELECT
-        l.hash AS hash, l.height AS height, l.timestamp AS timestamp,
-        block.size AS size, address.string AS miner
-      FROM (
-        SELECT hash, height, timestamp FROM header
-        WHERE timestamp BETWEEN ${min} AND ${max - 1}
-        ORDER BY height ASC
-      ) l, block, address WHERE l.height = block.height AND address._id = block.miner_id
-    `, {type: db.QueryTypes.SELECT, transaction: this.ctx.state.transaction})
-    if (blocks.length === 0) {
-      return []
+    let dateFilterString = ''
+    if (dateFilter) {
+      dateFilterString = sql`AND timestamp BETWEEN ${dateFilter.min} AND ${dateFilter.max - 1}`
     }
-    return await this.getBlockSummary(blocks)
+    let [{totalCount}] = await db.query(sql`
+      SELECT COUNT(*) AS totalCount FROM header WHERE height <= ${this.app.blockchainInfo.tip.height} ${{raw: dateFilterString}}
+    `, {type: db.QueryTypes.SELECT, transaction: this.ctx.state.transaction})
+    let blocks
+    if (this.ctx.state.pagination) {
+      let {limit, offset} = this.ctx.state.pagination
+      blocks = await db.query(sql`
+        SELECT
+          header.hash AS hash, l.height AS height, header.timestamp AS timestamp,
+          block.size AS size, address.string AS miner
+        FROM (
+          SELECT height FROM header
+          WHERE height <= ${this.app.blockchainInfo.tip.height} ${{raw: dateFilterString}}
+          ORDER BY height DESC
+          LIMIT ${offset}, ${limit}
+        ) l, header, block, address
+        WHERE l.height = header.height AND l.height = block.height AND address._id = block.miner_id
+        ORDER BY l.height ASC
+      `, {type: db.QueryTypes.SELECT, transaction: this.ctx.state.transaction})
+    } else { 
+      blocks = await db.query(sql`
+        SELECT
+          header.hash AS hash, l.height AS height, header.timestamp AS timestamp,
+          block.size AS size, address.string AS miner
+        FROM (
+          SELECT height FROM header
+          WHERE height <= ${this.app.blockchainInfo.tip.height} ${{raw: dateFilterString}}
+          ORDER BY height DESC
+        ) l, header, block, address
+        WHERE l.height = header.height AND l.height = block.height AND address._id = block.miner_id
+        ORDER BY l.height ASC
+      `, {type: db.QueryTypes.SELECT, transaction: this.ctx.state.transaction})
+    }
+    if (blocks.length === 0) {
+      return {totalCount, blocks: []}
+    } else {
+      return {totalCount, blocks: await this.getBlockSummary(blocks)}
+    }
   }
 
   async getRecentBlocks(count) {
@@ -147,6 +175,7 @@ class BlockService extends Service {
         ORDER BY height DESC
         LIMIT ${count}
       ) l, header, address WHERE l.height = header.height AND l.miner_id = address._id
+      ORDER BY l.height DESC
     `, {type: db.QueryTypes.SELECT, transaction: this.ctx.state.transaction})
     if (blocks.length === 0) {
       return []
@@ -160,21 +189,24 @@ class BlockService extends Service {
     const {sql} = this.ctx.helper
     let rewards = await db.query(sql`
       SELECT SUM(value) AS value FROM (
-        SELECT tx.block_height AS height, utxo.value AS value FROM transaction tx, transaction_output utxo
+        SELECT tx.block_height AS height, output.value AS value FROM header, transaction tx, transaction_output output
         WHERE
           tx.block_height BETWEEN ${startHeight} AND ${endHeight - 1}
-          AND ((tx.block_height <= 5000 AND tx.index_in_block = 0) OR (tx.block_height > 5000 AND tx.index_in_block = 1))
-          AND tx.id = utxo.output_transaction_id
-          AND NOT EXISTS(
-            SELECT refund_transaction_id FROM gas_refund
-            WHERE refund_transaction_id = utxo.output_transaction_id AND refund_index = utxo.output_index
+          AND header.height = tx.block_height
+          AND tx.index_in_block = (SELECT CASE header.stake_prev_transaction_id WHEN ${Buffer.alloc(32)} THEN 0 ELSE 1 END)
+          AND output.transaction_id = tx._id
+          AND NOT EXISTS (
+            SELECT refund_id FROM gas_refund
+            WHERE refund_id = output.transaction_id AND refund_index = output.output_index
           )
         UNION ALL
-        SELECT tx.block_height AS height, -txo.value AS value FROM transaction tx, transaction_output txo
+        SELECT tx.block_height AS height, -input.value AS value
+        FROM header, transaction tx, transaction_input input
         WHERE
           tx.block_height BETWEEN ${startHeight} AND ${endHeight - 1}
-          AND ((tx.block_height <= 5000 AND tx.index_in_block = 0) OR (tx.block_height > 5000 AND tx.index_in_block = 1))
-          AND tx.id = txo.input_transaction_id
+          AND header.height = tx.block_height
+          AND tx.index_in_block = (SELECT CASE header.stake_prev_transaction_id WHEN ${Buffer.alloc(32)} THEN 0 ELSE 1 END)
+          AND input.transaction_id = tx._id
       ) block_reward
       GROUP BY height
       ORDER BY height ASC
@@ -232,11 +264,12 @@ class BlockService extends Service {
   }
 
   async getBiggestMiners(lastNBlocks) {
+    const fromBlock = this.app.chain.lastPoWBlockHeight >= 0xffffffff ? this.app.chain.lastPoWBlockHeight : 1
     const db = this.ctx.model
     const {sql} = this.ctx.helper
     const {Block} = db
     const {gte: $gte} = this.app.Sequelize.Op
-    let fromBlockHeight = lastNBlocks == null ? 5001 : Math.max(this.app.blockchainInfo.height - lastNBlocks + 1, 5001)
+    let fromBlockHeight = lastNBlocks == null ? fromBlock : Math.max(this.app.blockchainInfo.height - lastNBlocks + 1, fromBlock)
     let {limit, offset} = this.ctx.state.pagination
     let totalCount = await Block.count({
       where: {height: {[$gte]: fromBlockHeight}},
@@ -254,6 +287,7 @@ class BlockService extends Service {
       ) list
       INNER JOIN address ON address._id = list.miner_id
       LEFT JOIN rich_list ON rich_list.address_id = address._id
+      ORDER BY blocks DESC
     `, {type: db.QueryTypes.SELECT, transaction: this.ctx.state.transaction})
     return {
       totalCount,
@@ -272,9 +306,15 @@ class BlockService extends Service {
   }
 
   async getBlockAddressTransactions(height) {
+<<<<<<< HEAD
     const {Address, Transaction, BalanceChange, Receipt, ReceiptLog, Contract} = this.ctx.model
     const {Address: RawAddress} = this.app.htmlcoininfo.lib
     const TransferABI = this.app.htmlcoininfo.lib.Solidity.hrc20ABIs.find(abi => abi.name === 'Transfer')
+=======
+    const {Address, Transaction, BalanceChange, EvmReceipt: EVMReceipt, EvmReceiptLog: EVMReceiptLog, Contract} = this.ctx.model
+    const {Address: RawAddress} = this.app.qtuminfo.lib
+    const TransferABI = this.app.qtuminfo.lib.Solidity.qrc20ABIs.find(abi => abi.name === 'Transfer')
+>>>>>>> 94f07a43e7021bb2e2f236da22cec97d6919b88b
     let result = []
     let balanceChanges = await BalanceChange.findAll({
       attributes: [],
@@ -298,11 +338,19 @@ class BlockService extends Service {
       result[transaction.indexInBlock] = result[transaction.indexInBlock] || new Set()
       result[transaction.indexInBlock].add(address.string)
     }
-    let receiptLogs = await ReceiptLog.findAll({
+    let receipts = await EVMReceipt.findAll({
+      where: {blockHeight: height},
+      attributes: ['indexInBlock', 'senderType', 'senderData']
+    })
+    for (let {indexInBlock, senderType, senderData} of receipts) {
+      result[indexInBlock] = result[indexInBlock] || new Set()
+      result[indexInBlock].add(new RawAddress({type: senderType, data: senderData, chain: this.app.chain}).toString())
+    }
+    let receiptLogs = await EVMReceiptLog.findAll({
       attributes: ['topic1', 'topic2', 'topic3', 'topic4'],
       include: [
         {
-          model: Receipt,
+          model: EVMReceipt,
           as: 'receipt',
           required: true,
           where: {blockHeight: height},
@@ -335,6 +383,34 @@ class BlockService extends Service {
       }
     }
     return result
+  }
+
+  getBlockFilter(category = 'blockHeight') {
+    const {gte: $gte, lte: $lte, between: $between} = this.app.Sequelize.Op
+    let {fromBlock, toBlock} = this.ctx.state
+    let blockFilter = null
+    if (fromBlock != null && toBlock != null) {
+      blockFilter = {[$between]: [fromBlock, toBlock]}
+    } else if (fromBlock != null) {
+      blockFilter = {[$gte]: fromBlock}
+    } else if (toBlock != null) {
+      blockFilter = {[$lte]: toBlock}
+    }
+    return blockFilter ? {[category]: blockFilter} : {}
+  }
+
+  getRawBlockFilter(category = 'block_height') {
+    const {sql} = this.ctx.helper
+    let {fromBlock, toBlock} = this.ctx.state
+    let blockFilter = 'TRUE'
+    if (fromBlock != null && toBlock != null) {
+      blockFilter = sql`${{raw: category}} BETWEEN ${fromBlock} AND ${toBlock}`
+    } else if (fromBlock != null) {
+      blockFilter = sql`${{raw: category}} >= ${fromBlock}`
+    } else if (toBlock != null) {
+      blockFilter = sql`${{raw: category}} <= ${toBlock}`
+    }
+    return {raw: blockFilter}
   }
 }
 

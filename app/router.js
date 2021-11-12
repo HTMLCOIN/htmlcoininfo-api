@@ -1,6 +1,7 @@
 module.exports = app => {
   const {router, controller, io, middleware} = app
   const addressMiddleware = middleware.address()
+  const blockFilterMiddleware = middleware.blockFilter()
   const contractMiddleware = middleware.contract()
   const paginationMiddleware = middleware.pagination()
 
@@ -8,12 +9,23 @@ module.exports = app => {
   router.get('/supply', controller.info.supply)
   router.get('/total-max-supply', controller.info.totalMaxSupply)
   router.get('/circulating-supply', controller.info.circulatingSupply)
+  router.get('/feerates', controller.info.feeRates)
 
   router.get('/blocks', controller.block.list)
+  router.get(
+    '/block/list',
+    paginationMiddleware,
+    controller.block.blockList
+  )
   router.get('/block/:block', controller.block.block)
   router.get('/raw-block/:block', controller.block.rawBlock)
   router.get('/recent-blocks', controller.block.recent)
 
+  router.get(
+    '/tx/list',
+    paginationMiddleware,
+    controller.transaction.list
+  )
   router.get('/tx/:id', controller.transaction.transaction)
   router.get('/txs/:ids', controller.transaction.transactions)
   router.get('/raw-tx/:id', controller.transaction.rawTransaction)
@@ -56,9 +68,39 @@ module.exports = app => {
     controller.address.matureBalance
   )
   router.get(
+    '/address/:address/qrc20-balance/:token',
+    addressMiddleware, middleware.contract('token'),
+    controller.address.qrc20TokenBalance
+  )
+  router.get(
     '/address/:address/txs',
-    addressMiddleware, paginationMiddleware,
+    addressMiddleware, paginationMiddleware, blockFilterMiddleware,
     controller.address.transactions
+  )
+  router.get(
+    '/address/:address/basic-txs',
+    addressMiddleware, paginationMiddleware, blockFilterMiddleware,
+    controller.address.basicTransactions
+  )
+  router.get(
+    '/address/:address/contract-txs',
+    addressMiddleware, paginationMiddleware, blockFilterMiddleware,
+    controller.address.contractTransactions
+  )
+  router.get(
+    '/address/:address/contract-txs/:contract',
+    addressMiddleware, contractMiddleware, paginationMiddleware,
+    controller.address.contractTransactions
+  )
+  router.get(
+    '/address/:address/qrc20-txs/:token',
+    addressMiddleware, middleware.contract('token'), paginationMiddleware,
+    controller.address.qrc20TokenTransactions
+  )
+  router.get(
+    '/address/:address/qrc20-mempool-txs/:token',
+    addressMiddleware, middleware.contract('token'),
+    controller.address.qrc20TokenMempoolTransactions
   )
   router.get(
     '/address/:address/utxo',
@@ -75,6 +117,11 @@ module.exports = app => {
     addressMiddleware, paginationMiddleware,
     controller.address.hrc20BalanceHistory
   )
+  router.get(
+    '/address/:address/qrc20-balance-history/:token',
+    addressMiddleware, middleware.contract('token'), paginationMiddleware,
+    controller.address.qrc20BalanceHistory
+  )
 
   router.get(
     '/contract/:contract',
@@ -83,8 +130,13 @@ module.exports = app => {
   )
   router.get(
     '/contract/:contract/txs',
-    contractMiddleware, paginationMiddleware,
+    contractMiddleware, paginationMiddleware, blockFilterMiddleware,
     controller.contract.transactions
+  )
+  router.get(
+    '/contract/:contract/basic-txs',
+    contractMiddleware, paginationMiddleware, blockFilterMiddleware,
+    controller.contract.basicTransactions
   )
   router.get(
     '/contract/:contract/balance-history',
@@ -97,13 +149,18 @@ module.exports = app => {
     controller.contract.hrc20BalanceHistory
   )
   router.get(
+    '/contract/:contract/qrc20-balance-history/:token',
+    contractMiddleware, middleware.contract('token'), paginationMiddleware,
+    controller.contract.qrc20BalanceHistory
+  )
+  router.get(
     '/contract/:contract/call',
     contractMiddleware,
     controller.contract.callContract
   )
   router.get(
     '/searchlogs',
-    paginationMiddleware,
+    paginationMiddleware, blockFilterMiddleware,
     controller.contract.searchLogs
   )
   router.get(
@@ -112,9 +169,25 @@ module.exports = app => {
     controller.hrc20.list
   )
   router.get(
+<<<<<<< HEAD
     '/hrc20/:contract/rich-list',
     contractMiddleware, paginationMiddleware,
     controller.hrc20.richList
+=======
+    '/qrc20/txs',
+    paginationMiddleware,
+    controller.qrc20.allTransactions
+  )
+  router.get(
+    '/qrc20/:token/txs',
+    middleware.contract('token'), paginationMiddleware, blockFilterMiddleware,
+    controller.qrc20.transactions
+  )
+  router.get(
+    '/qrc20/:token/rich-list',
+    middleware.contract('token'), paginationMiddleware,
+    controller.qrc20.richList
+>>>>>>> 94f07a43e7021bb2e2f236da22cec97d6919b88b
   )
   router.get(
     '/hrc721',
@@ -133,6 +206,7 @@ module.exports = app => {
     paginationMiddleware,
     controller.misc.biggestMiners
   )
+  router.get('/misc/prices', controller.misc.prices)
 
   router.get('/stats/daily-transactions', controller.statistics.dailyTransactions)
   router.get('/stats/block-interval', controller.statistics.blockInterval)

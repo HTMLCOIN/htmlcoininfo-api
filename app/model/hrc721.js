@@ -39,12 +39,21 @@ module.exports = app => {
     }
   }, {freezeTableName: true, underscored: true, timestamps: false})
 
+<<<<<<< HEAD:app/model/hrc721.js
   HRC721.associate = () => {
     const {ReceiptLog, Contract} = app.model
     ReceiptLog.belongsTo(HRC721, {as: 'hrc721', foreignKey: 'address', sourceKey: 'contractAddress'})
     HRC721.hasOne(ReceiptLog, {as: 'eventLogs', foreignKey: 'address', sourceKey: 'contractAddress'})
     Contract.hasOne(HRC721, {as: 'hrc721', foreignKey: 'contractAddress'})
     HRC721.belongsTo(Contract, {as: 'contract', foreignKey: 'contractAddress'})
+=======
+  QRC721.associate = () => {
+    const {EvmReceiptLog: EVMReceiptLog, Contract} = app.model
+    EVMReceiptLog.belongsTo(QRC721, {as: 'qrc721', foreignKey: 'address', sourceKey: 'contractAddress'})
+    QRC721.hasOne(EVMReceiptLog, {as: 'logs', foreignKey: 'address', sourceKey: 'contractAddress'})
+    Contract.hasOne(QRC721, {as: 'qrc721', foreignKey: 'contractAddress'})
+    QRC721.belongsTo(Contract, {as: 'contract', foreignKey: 'contractAddress'})
+>>>>>>> 94f07a43e7021bb2e2f236da22cec97d6919b88b:app/model/qrc721.js
   }
 
   return HRC721
