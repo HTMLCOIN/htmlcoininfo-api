@@ -1,26 +1,30 @@
 const {Service} = require('egg')
 
 class InfoService extends Service {
-  getInfo() {
-    let info = this.app.blockchainInfo
+  async getInfo() {
+    let height = this.app.blockchainInfo.tip.height
+    let stakeWeight = JSON.parse(await this.app.redis.hget(this.app.name, 'stakeweight')) || 0
+    let feeRate = JSON.parse(await this.app.redis.hget(this.app.name, 'feerate')).find(item => item.blocks === 10).feeRate || 0.004
+    let dgpInfo = JSON.parse(await this.app.redis.hget(this.app.name, 'dgpinfo')) || {}
     return {
-      height: info.tip.height,
-      supply: this.getTotalSupply(info.tip.height),
-      circulatingSupply: this.getCirculatingSupply(info.tip.height),
-      netStakeWeight: Math.round(info.stakeWeight),
-      feeRate: info.feeRate,
-      dgpInfo: info.dgpInfo
+      height,
+      supply: this.getTotalSupply(),
+      ...this.app.chain.name === 'mainnet' ? {circulatingSupply: this.getCirculatingSupply()} : {},
+      netStakeWeight: Math.round(stakeWeight),
+      feeRate,
+      dgpInfo
     }
   }
 
-  getTotalSupply(height) {
-    if (height <= 5000) {
+  getTotalSupply() {
+    let height = this.app.blockchainInfo.tip.height
+    if (height <= this.app.chain.lastPoWBlockHeight) {
       return height * 20000
     } else {
       let supply = 1e8
       let reward = 4
       let interval = 985500
-      let stakeHeight = height - 5000
+      let stakeHeight = height - this.app.chain.lastPoWBlockHeight
       let halvings = 0
       while (halvings < 7 && stakeHeight > interval) {
         supply += interval * reward / (1 << halvings++)
@@ -35,9 +39,14 @@ class InfoService extends Service {
     return 1e8 + 985500 * 4 * (1 - 1 / 2 ** 7) / (1 - 1 / 2)
   }
 
-  getCirculatingSupply(height) {
+  getCirculatingSupply() {
+    let height = this.app.blockchainInfo.tip.height
     let totalSupply = this.getTotalSupply(height)
+<<<<<<< HEAD
     if (this.app.config.htmlcoin.chain === 'mainnet') {
+=======
+    if (this.app.chain.name === 'mainnet') {
+>>>>>>> 94f07a43e7021bb2e2f236da22cec97d6919b88b
       return totalSupply - 575e4
     } else {
       return totalSupply
@@ -49,7 +58,7 @@ class InfoService extends Service {
     const {gte: $gte} = this.app.Sequelize.Op
     let height = await Header.aggregate('height', 'max', {transaction: this.ctx.state.transaction})
     let list = await Header.findAll({
-      where: {height: {[$gte]: height - 72}},
+      where: {height: {[$gte]: height - 500}},
       attributes: ['timestamp', 'bits'],
       order: [['height', 'ASC']],
       transaction: this.ctx.state.transaction
@@ -61,10 +70,24 @@ class InfoService extends Service {
     return sum * 2 ** 32 * 16 / interval
   }
 
+<<<<<<< HEAD
   async getFeeRate() {
     let client = new this.app.htmlcoininfo.rpc(this.app.config.htmlcoininfo.rpc)
     let info = await client.estimatesmartfee(10)
     return info.feerate
+=======
+  async getFeeRates() {
+    let client = new this.app.qtuminfo.rpc(this.app.config.qtuminfo.rpc)
+    let results = await Promise.all([2, 4, 6, 10, 12, 24].map(blocks => client.estimatesmartfee(blocks)))
+    return [
+      {blocks: 2, feeRate: results[0].feerate || 0.004},
+      {blocks: 4, feeRate: results[1].feerate || 0.004},
+      {blocks: 6, feeRate: results[2].feerate || 0.004},
+      {blocks: 10, feeRate: results[3].feerate || 0.004},
+      {blocks: 12, feeRate: results[4].feerate || 0.004},
+      {blocks: 24, feeRate: results[5].feerate || 0.004}
+    ]
+>>>>>>> 94f07a43e7021bb2e2f236da22cec97d6919b88b
   }
 
   async getDGPInfo() {

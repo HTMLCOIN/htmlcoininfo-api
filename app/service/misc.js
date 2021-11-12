@@ -70,6 +70,7 @@ class MiscService extends Service {
         transaction
       })).map(hrc20 => hrc20.contractAddress)
     }
+<<<<<<< HEAD
     if (hrc20Results.length) {
       let [{address, addressHex}] = await db.query(sql`
         SELECT contract.address_string AS address, contract.address AS addressHex FROM (
@@ -79,11 +80,57 @@ class MiscService extends Service {
           ORDER BY holders DESC LIMIT 1
         ) hrc20_balance
         INNER JOIN contract ON contract.address = hrc20_balance.contract_address
+=======
+    if (qrc20Results.length) {
+      let [{addressHex}] = await db.query(sql`
+        SELECT contract.address_string AS address, contract.address AS addressHex FROM (
+          SELECT contract_address FROM qrc20_statistics
+          WHERE contract_address IN ${qrc20Results}
+          ORDER BY transactions DESC LIMIT 1
+        ) qrc20_balance
+        INNER JOIN contract ON contract.address = qrc20_balance.contract_address
+>>>>>>> 94f07a43e7021bb2e2f236da22cec97d6919b88b
       `, {type: db.QueryTypes.SELECT, transaction})
-      return {type: 'contract', address, addressHex: addressHex.toString('hex')}
+      return {type: 'contract', address: addressHex.toString('hex'), addressHex: addressHex.toString('hex')}
     }
 
     return {}
+  }
+
+  async getPrices() {
+    let apiKey = this.app.config.cmcAPIKey
+    if (!apiKey) {
+      return {}
+    }
+    const coinId = 1684
+    let [USDResult, CNYResult] = await Promise.all([
+      this.ctx.curl('https://pro-api.coinmarketcap.com/v1/cryptocurrency/quotes/latest', {
+        headers: {
+          'X-CMC_PRO_API_KEY': apiKey,
+          Accept: 'application/json'
+        },
+        data: {
+          id: coinId,
+          convert: 'USD'
+        },
+        dataType: 'json'
+      }),
+      this.ctx.curl('https://pro-api.coinmarketcap.com/v1/cryptocurrency/quotes/latest', {
+        headers: {
+          'X-CMC_PRO_API_KEY': apiKey,
+          Accept: 'application/json'
+        },
+        data: {
+          id: coinId,
+          convert: 'CNY'
+        },
+        dataType: 'json'
+      })
+    ])
+    return {
+      USD: USDResult.data.data[coinId].quote.USD.price,
+      CNY: CNYResult.data.data[coinId].quote.CNY.price
+    }
   }
 }
 

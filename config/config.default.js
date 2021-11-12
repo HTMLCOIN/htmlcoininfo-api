@@ -1,27 +1,41 @@
 const path = require('path')
 const Redis = require('ioredis')
 
+<<<<<<< HEAD
 exports.keys = 'htmlcoininfo-api-mainnet'
+=======
+const redisConfig = {
+  host: 'localhost',
+  port: 6379,
+  password: '',
+  db: 0
+}
+
+exports.keys = 'qtuminfo-api'
+>>>>>>> 94f07a43e7021bb2e2f236da22cec97d6919b88b
 
 exports.security = {
   csrf: {enable: false}
 }
 
-exports.middleware = ['cors', 'ratelimit']
+exports.middleware = ['ratelimit']
+
+exports.redis = {
+  client: redisConfig
+}
 
 exports.ratelimit = {
-  db: new Redis({
-    host: 'localhost',
-    port: 6379,
-    db: 0
-  }),
+  db: new Redis(redisConfig),
   headers: {
     remaining: 'Rate-Limit-Remaining',
     reset: 'Rate-Limit-Reset',
     total: 'Rate-Limit-Total',
   },
   disableHeader: false,
+<<<<<<< HEAD
   id: ctx => `htmlcoininfo-api-mainnet-${ctx.get('x-forwarded-for') || ctx.ip}`,
+=======
+>>>>>>> 94f07a43e7021bb2e2f236da22cec97d6919b88b
   errorMessage: 'Rate Limit Exceeded',
   duration: 10 * 60 * 1000,
   max: 10 * 60
@@ -29,9 +43,8 @@ exports.ratelimit = {
 
 exports.io = {
   redis: {
-    host: 'localhost',
-    port: 6379,
-    db: 0
+    ...redisConfig,
+    key: 'qtuminfo-api-socket.io'
   },
   namespace: {
     '/': {connectionMiddleware: ['connection']}
@@ -39,7 +52,6 @@ exports.io = {
 }
 
 exports.sequelize = {
-  Sequelize: require('sequelize'),
   dialect: 'mysql',
   database: 'htmlcoin_mainnet',
   host: 'localhost',
@@ -63,3 +75,5 @@ exports.htmlcoininfo = {
     password: 'password'
   }
 }
+
+exports.cmcAPIKey = null

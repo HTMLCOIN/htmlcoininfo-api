@@ -12,7 +12,7 @@ class MiscController extends Controller {
     ctx.body = {
       totalCount,
       list: list.map(item => ({
-        address: item.address,
+        address: item.addressHex ? item.addressHex.toString('hex') : item.address,
         addressHex: item.addressHex && item.addressHex.toString('hex'),
         balance: item.balance.toString()
       }))
@@ -34,6 +34,10 @@ class MiscController extends Controller {
         balance: item.balance.toString()
       }))
     }
+  }
+
+  async prices() {
+    this.ctx.body = JSON.parse(await this.app.redis.hget(this.app.name, 'qtum-price'))
   }
 }
 

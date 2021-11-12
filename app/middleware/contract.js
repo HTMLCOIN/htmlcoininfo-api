@@ -1,22 +1,28 @@
+<<<<<<< HEAD
 module.exports = () => async function contract(ctx, next) {
   ctx.assert(ctx.params.contract, 404)
   const {Address: RawAddress} = ctx.app.htmlcoininfo.lib
+=======
+module.exports = (paramName = 'contract') => async function contract(ctx, next) {
+  ctx.assert(ctx.params[paramName], 404)
+  const {Address: RawAddress} = ctx.app.qtuminfo.lib
+>>>>>>> 94f07a43e7021bb2e2f236da22cec97d6919b88b
   const chain = ctx.app.chain
   const {Address, Contract} = ctx.model
-  const {in: $in} = ctx.app.Sequelize.Op
+  const {gte: $gte} = ctx.app.Sequelize.Op
 
   let contract = {}
   let rawAddress
   try {
-    rawAddress = RawAddress.fromString(ctx.params.contract, chain)
+    rawAddress = RawAddress.fromString(ctx.params[paramName], chain)
   } catch (err) {
     ctx.throw(400)
   }
   let filter
   if (rawAddress.type === RawAddress.CONTRACT) {
-    filter = {address: Buffer.from(ctx.params.contract, 'hex')}
+    filter = {address: Buffer.from(ctx.params[paramName], 'hex')}
   } else if (rawAddress.type === RawAddress.EVM_CONTRACT) {
-    filter = {addressString: ctx.params.contract}
+    filter = {addressString: ctx.params[paramName]}
   } else {
     ctx.throw(400)
   }
@@ -33,13 +39,13 @@ module.exports = () => async function contract(ctx, next) {
 
   let addressList = await Address.findAll({
     where: {
-      type: {[$in]: ['contract', 'evm_contract']},
+      type: {[$gte]: Address.parseType('contract')},
       data: contract.contractAddress
     },
     attributes: ['_id'],
     transaction: ctx.state.transaction
   })
   contract.addressIds = addressList.map(address => address._id)
-  ctx.state.contract = contract
+  ctx.state[paramName] = contract
   await next()
 }

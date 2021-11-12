@@ -31,16 +31,17 @@ class StatisticsService extends Service {
       GROUP BY blockInterval
       ORDER BY blockInterval ASC
     `, {type: db.QueryTypes.SELECT, transaction: this.ctx.state.transaction})
-    let total = this.app.blockchainInfo.height - 5001
+    let total = this.app.blockchainInfo.tip.height - 5001
     return result.map(({blockInterval, count}) => ({interval: blockInterval, count, percentage: count / total}))
   }
 
   async getAddressGrowth() {
     const db = this.ctx.model
+    const {Address} = db
     const {sql} = this.ctx.helper
     let result = await db.query(sql`
       SELECT FLOOR(header.timestamp / 86400) AS date, COUNT(*) AS count FROM address, header
-      WHERE address.create_height = header.height AND address.type NOT IN ('contract', 'evm_contract')
+      WHERE address.create_height = header.height AND address.type < ${Address.parseType('contract')}
       GROUP BY date
       ORDER BY date ASC
     `, {type: db.QueryTypes.SELECT, transaction: this.ctx.state.transaction})

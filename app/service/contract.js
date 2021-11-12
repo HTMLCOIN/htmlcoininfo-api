@@ -34,34 +34,39 @@ class ContractService extends Service {
   }
 
   async getContractSummary(contractAddress, addressIds) {
+<<<<<<< HEAD
     const {Address, Contract, Hrc20: HRC20, Hrc20Balance: HRC20Balance, Hrc721: HRC721} = this.ctx.model
     const {balance: balanceService, hrc20: hrc20Service, hrc721: hrc721Service} = this.ctx.service
     const {ne: $ne} = this.app.Sequelize.Op
+=======
+    const {Contract, Qrc20: QRC20, Qrc20Statistics: QRC20Statistics, Qrc721: QRC721} = this.ctx.model
+    const {balance: balanceService, qrc20: qrc20Service, qrc721: qrc721Service} = this.ctx.service
+>>>>>>> 94f07a43e7021bb2e2f236da22cec97d6919b88b
     let contract = await Contract.findOne({
       where: {address: contractAddress},
-      attributes: ['addressString', 'vm', 'type', 'createTxId', 'createHeight'],
+      attributes: ['addressString', 'vm', 'type'],
       include: [
         {
           model: HRC20,
           as: 'hrc20',
           required: false,
-          attributes: ['name', 'symbol', 'decimals', 'totalSupply', 'version']
+          attributes: ['name', 'symbol', 'decimals', 'totalSupply', 'version'],
+          include: [{
+            model: QRC20Statistics,
+            as: 'statistics',
+            required: true
+          }]
         },
         {
           model: HRC721,
           as: 'hrc721',
           required: false,
           attributes: ['name', 'symbol', 'totalSupply']
-        },
-        {
-          model: Address,
-          as: 'owner',
-          required: false,
-          attributes: ['string']
         }
       ],
       transaction: this.ctx.state.transaction
     })
+<<<<<<< HEAD
     if (contract.type === 'hrc20') {
       contract.hrc20.holders = await HRC20Balance.count({
         where: {
@@ -72,6 +77,8 @@ class ContractService extends Service {
         transaction: this.ctx.state.transaction
       })
     }
+=======
+>>>>>>> 94f07a43e7021bb2e2f236da22cec97d6919b88b
     let [
       {totalReceived, totalSent},
       unconfirmed,
@@ -86,10 +93,11 @@ class ContractService extends Service {
       this.getContractTransactionCount(contractAddress, addressIds)
     ])
     return {
-      address: contract.addressString,
+      address: contractAddress.toString('hex'),
       addressHex: contractAddress,
       vm: contract.vm,
       type: contract.type,
+<<<<<<< HEAD
       owner: contract.owner && contract.owner.string,
       createTxId: contract.createTxId,
       createHeight: contract.createHeight,
@@ -101,6 +109,17 @@ class ContractService extends Service {
           totalSupply: contract.hrc20.totalSupply,
           version: contract.hrc20.version,
           holders: contract.hrc20.holders
+=======
+      ...contract.type === 'qrc20' ? {
+        qrc20: {
+          name: contract.qrc20.name,
+          symbol: contract.qrc20.symbol,
+          decimals: contract.qrc20.decimals,
+          totalSupply: contract.qrc20.totalSupply,
+          version: contract.qrc20.version,
+          holders: contract.qrc20.statistics.holders,
+          transactions: contract.qrc20.statistics.transactions
+>>>>>>> 94f07a43e7021bb2e2f236da22cec97d6919b88b
         }
       } : {},
       ...contract.type === 'hrc721' ? {
@@ -125,15 +144,19 @@ class ContractService extends Service {
     const db = this.ctx.model
     let {sql} = this.ctx.helper
     let topic = Buffer.concat([Buffer.alloc(12), contractAddress])
-    let result = await db.query(sql`
+    let [{count}] = await db.query(sql`
       SELECT COUNT(*) AS count FROM (
-        SELECT transaction_id FROM balance_change WHERE address_id IN ${addressIds}
+        SELECT transaction_id FROM balance_change
+        WHERE address_id IN ${addressIds} AND ${this.ctx.service.block.getRawBlockFilter()}
         UNION
-        SELECT transaction_id FROM receipt WHERE contract_address = ${contractAddress}
+        SELECT transaction_id FROM evm_receipt
+        WHERE contract_address = ${contractAddress} AND ${this.ctx.service.block.getRawBlockFilter()}
         UNION
-        SELECT receipt.transaction_id AS transaction_id FROM receipt, receipt_log
-        WHERE receipt_log.receipt_id = receipt._id AND receipt_log.address = ${contractAddress}
+        SELECT receipt.transaction_id AS transaction_id FROM evm_receipt receipt, evm_receipt_log log
+        WHERE log.receipt_id = receipt._id AND log.address = ${contractAddress}
+          AND ${this.ctx.service.block.getRawBlockFilter('receipt.block_height')}
         UNION
+<<<<<<< HEAD
         SELECT receipt.transaction_id AS transaction_id FROM receipt, receipt_log, contract
         WHERE receipt_log.receipt_id = receipt._id
           AND contract.address = receipt_log.address AND contract.type IN ('hrc20', 'hrc721')
@@ -142,10 +165,21 @@ class ContractService extends Service {
           AND (
             (contract.type = 'hrc20' AND receipt_log.topic3 IS NOT NULL AND receipt_log.topic4 IS NULL)
             OR (contract.type = 'hrc721' AND receipt_log.topic4 IS NOT NULL)
+=======
+        SELECT receipt.transaction_id AS transaction_id FROM evm_receipt receipt, evm_receipt_log log, contract
+        WHERE log.receipt_id = receipt._id
+          AND ${this.ctx.service.block.getRawBlockFilter('receipt.block_height')}
+          AND contract.address = log.address AND contract.type IN ('qrc20', 'qrc721')
+          AND log.topic1 = ${TransferABI.id}
+          AND (log.topic2 = ${topic} OR log.topic3 = ${topic})
+          AND (
+            (contract.type = 'qrc20' AND log.topic3 IS NOT NULL AND log.topic4 IS NULL)
+            OR (contract.type = 'qrc721' AND log.topic4 IS NOT NULL)
+>>>>>>> 94f07a43e7021bb2e2f236da22cec97d6919b88b
           )
       ) list
     `, {type: db.QueryTypes.SELECT, transaction: this.ctx.state.transaction})
-    return result[0].count || 0
+    return count
   }
 
   async getContractTransactions(contractAddress, addressIds) {
@@ -158,16 +192,20 @@ class ContractService extends Service {
     let totalCount = await this.getContractTransactionCount(contractAddress, addressIds)
     let transactions = await db.query(sql`
       SELECT tx.id AS id FROM (
-        SELECT _id FROM (
-          SELECT block_height, index_in_block, transaction_id AS _id FROM balance_change WHERE address_id IN ${addressIds}
+        SELECT block_height, index_in_block, _id FROM (
+          SELECT block_height, index_in_block, transaction_id AS _id FROM balance_change
+          WHERE address_id IN ${addressIds} AND ${this.ctx.service.block.getRawBlockFilter()}
           UNION
-          SELECT block_height, index_in_block, transaction_id AS _id FROM receipt WHERE contract_address = ${contractAddress}
-          UNION
-          SELECT receipt.block_height AS block_height, receipt.index_in_block AS index_in_block, receipt.transaction_id AS _id
-          FROM receipt, receipt_log
-          WHERE receipt_log.receipt_id = receipt._id AND receipt_log.address = ${contractAddress}
+          SELECT block_height, index_in_block, transaction_id AS _id FROM evm_receipt
+          WHERE contract_address = ${contractAddress} AND ${this.ctx.service.block.getRawBlockFilter()}
           UNION
           SELECT receipt.block_height AS block_height, receipt.index_in_block AS index_in_block, receipt.transaction_id AS _id
+          FROM evm_receipt receipt, evm_receipt_log log
+          WHERE log.receipt_id = receipt._id AND log.address = ${contractAddress}
+            AND ${this.ctx.service.block.getRawBlockFilter('receipt.block_height')}
+          UNION
+          SELECT receipt.block_height AS block_height, receipt.index_in_block AS index_in_block, receipt.transaction_id AS _id
+<<<<<<< HEAD
           FROM receipt, receipt_log, contract
           WHERE receipt_log.receipt_id = receipt._id
             AND contract.address = receipt_log.address AND contract.type IN ('hrc20', 'hrc721')
@@ -176,16 +214,29 @@ class ContractService extends Service {
             AND (
               (contract.type = 'hrc20' AND receipt_log.topic3 IS NOT NULL AND receipt_log.topic4 IS NULL)
               OR (contract.type = 'hrc721' AND receipt_log.topic4 IS NOT NULL)
+=======
+          FROM evm_receipt receipt, evm_receipt_log log, contract
+          WHERE log.receipt_id = receipt._id
+            AND ${this.ctx.service.block.getRawBlockFilter('receipt.block_height')}
+            AND contract.address = log.address AND contract.type IN ('qrc20', 'qrc721')
+            AND log.topic1 = ${TransferABI.id}
+            AND (log.topic2 = ${topic} OR log.topic3 = ${topic})
+            AND (
+              (contract.type = 'qrc20' AND log.topic3 IS NOT NULL AND log.topic4 IS NULL)
+              OR (contract.type = 'qrc721' AND log.topic4 IS NOT NULL)
+>>>>>>> 94f07a43e7021bb2e2f236da22cec97d6919b88b
             )
         ) list
         ORDER BY block_height ${{raw: order}}, index_in_block ${{raw: order}}, _id ${{raw: order}}
         LIMIT ${offset}, ${limit}
       ) list, transaction tx
       WHERE tx._id = list._id
+      ORDER BY list.block_height ${{raw: order}}, list.index_in_block ${{raw: order}}, list._id ${{raw: order}}
     `, {type: db.QueryTypes.SELECT, transaction: this.ctx.state.transaction}).map(({id}) => id)
     return {totalCount, transactions}
   }
 
+<<<<<<< HEAD
   async callContract(contract, data, sender) {
     let client = new this.app.htmlcoininfo.rpc(this.app.config.htmlcoininfo.rpc)
     return await client.callcontract(contract.toString('hex'), data.toString('hex'))
@@ -233,40 +284,163 @@ class ContractService extends Service {
     })
 
     let totalCount = await ReceiptLog.count({
+=======
+  async getContractBasicTransactionCount(contractAddress) {
+    const {EvmReceipt: EVMReceipt} = this.ctx.model
+    return await EVMReceipt.count({
+>>>>>>> 94f07a43e7021bb2e2f236da22cec97d6919b88b
       where: {
-        ...idFilter,
-        ...contract ? {address: contract} : {},
-        ...topic1 ? {topic1} : {},
-        ...topic2 ? {topic2} : {},
-        ...topic3 ? {topic3} : {},
-        ...topic4 ? {topic4} : {}
+        contractAddress,
+        ...this.ctx.service.block.getBlockFilter()
       },
       transaction: this.ctx.state.transaction
     })
-    let ids = await ReceiptLog.findAll({
+  }
+
+  async getContractBasicTransactions(contractAddress) {
+    const {Address, OutputScript} = this.app.qtuminfo.lib
+    const {
+      Header, Transaction, TransactionOutput, Contract, EvmReceipt: EVMReceipt, EvmReceiptLog: EVMReceiptLog,
+      where, col
+    } = this.ctx.model
+    const {in: $in} = this.app.Sequelize.Op
+    let {limit, offset, reversed = true} = this.ctx.state.pagination
+    let order = reversed ? 'DESC' : 'ASC'
+    let totalCount = await this.getContractBasicTransactionCount(contractAddress)
+    let receiptIds = (await EVMReceipt.findAll({
       where: {
-        ...idFilter,
-        ...contract ? {address: contract} : {},
-        ...topic1 ? {topic1} : {},
-        ...topic2 ? {topic2} : {},
-        ...topic3 ? {topic3} : {},
-        ...topic4 ? {topic4} : {}
+        contractAddress,
+        ...this.ctx.service.block.getBlockFilter()
       },
       attributes: ['_id'],
-      order: [['receiptId', 'ASC'], ['logIndex', 'ASC']],
+      order: [['blockHeight', order], ['indexInBlock', order], ['transactionId', order], ['outputIndex', order]],
       limit,
       offset,
       transaction: this.ctx.state.transaction
+    })).map(receipt => receipt._id)
+    let receipts = await EVMReceipt.findAll({
+      where: {_id: {[$in]: receiptIds}},
+      include: [
+        {
+          model: Header,
+          as: 'header',
+          required: false,
+          attributes: ['hash', 'timestamp']
+        },
+        {
+          model: Transaction,
+          as: 'transaction',
+          required: true,
+          attributes: ['id']
+        },
+        {
+          model: TransactionOutput,
+          as: 'output',
+          on: {
+            transactionId: where(col('output.transaction_id'), '=', col('evm_receipt.transaction_id')),
+            outputIndex: where(col('output.output_index'), '=', col('evm_receipt.output_index'))
+          },
+          required: true,
+          attributes: ['scriptPubKey', 'value']
+        },
+        {
+          model: EVMReceiptLog,
+          as: 'logs',
+          required: false,
+          include: [{
+            model: Contract,
+            as: 'contract',
+            required: true,
+            attributes: ['addressString']
+          }]
+        },
+        {
+          model: Contract,
+          as: 'contract',
+          required: true,
+          attributes: ['addressString']
+        }
+      ],
+      order: [['blockHeight', order], ['indexInBlock', order], ['transactionId', order], ['outputIndex', order]],
+      transaction: this.ctx.state.transaction
     })
-    let logs = await ReceiptLog.findAll({
-      where: {_id: {[$in]: ids.map(item => item._id)}},
+    let transactions = receipts.map(receipt => ({
+      transactionId: receipt.transaction.id,
+      outputIndex: receipt.outputIndex,
+      ...receipt.header ? {
+        blockHeight: receipt.blockHeight,
+        blockHash: receipt.header.hash,
+        timestamp: receipt.header.timestamp,
+        confirmations: this.app.blockchainInfo.tip.height - receipt.blockHeight + 1
+      } : {confirmations: 0},
+      scriptPubKey: OutputScript.fromBuffer(receipt.output.scriptPubKey),
+      value: receipt.output.value,
+      sender: new Address({type: receipt.senderType, data: receipt.senderData, chain: this.app.chain}),
+      gasUsed: receipt.gasUsed,
+      contractAddress: receipt.contractAddress.toString('hex'),
+      contractAddressHex: receipt.contractAddress,
+      excepted: receipt.excepted,
+      exceptedMessage: receipt.exceptedMessage,
+      evmLogs: receipt.logs.sort((x, y) => x.logIndex - y.logIndex).map(log => ({
+        address: log.address.toString('hex'),
+        addressHex: log.address,
+        topics: this.ctx.service.transaction.transformTopics(log),
+        data: log.data
+      }))
+    }))
+    return {totalCount, transactions}
+  }
+
+  async callContract(contract, data, sender) {
+    let client = new this.app.qtuminfo.rpc(this.app.config.qtuminfo.rpc)
+    return await client.callcontract(
+      contract.toString('hex'),
+      data.toString('hex'),
+      ...sender == null ? [] : [sender.toString('hex')]
+    )
+  }
+
+  async searchLogs({contract, topic1, topic2, topic3, topic4} = {}) {
+    const {Address} = this.app.qtuminfo.lib
+    const db = this.ctx.model
+    const {Header, Transaction, EvmReceipt: EVMReceipt, EvmReceiptLog: EVMReceiptLog, Contract} = db
+    const {in: $in} = this.ctx.app.Sequelize.Op
+    const {sql} = this.ctx.helper
+    let {limit, offset} = this.ctx.state.pagination
+
+    let blockFilter = this.ctx.service.block.getRawBlockFilter('receipt.block_height')
+    let contractFilter = contract ? sql`log.address = ${contract}` : 'TRUE'
+    let topic1Filter = topic1 ? sql`log.topic1 = ${topic1}` : 'TRUE'
+    let topic2Filter = topic2 ? sql`log.topic2 = ${topic2}` : 'TRUE'
+    let topic3Filter = topic3 ? sql`log.topic3 = ${topic3}` : 'TRUE'
+    let topic4Filter = topic4 ? sql`log.topic4 = ${topic4}` : 'TRUE'
+
+    let [{count: totalCount}] = await db.query(sql`
+      SELECT COUNT(DISTINCT(log._id)) AS count from evm_receipt receipt, evm_receipt_log log
+      WHERE receipt._id = log.receipt_id AND ${blockFilter} AND ${{raw: contractFilter}}
+        AND ${{raw: topic1Filter}} AND ${{raw: topic2Filter}} AND ${{raw: topic3Filter}} AND ${{raw: topic4Filter}}
+    `, {type: db.QueryTypes.SELECT, transaction: this.ctx.transaction})
+    if (totalCount === 0) {
+      return {totalCount, logs: []}
+    }
+
+    let ids = (await db.query(sql`
+      SELECT log._id AS _id from evm_receipt receipt, evm_receipt_log log
+      WHERE receipt._id = log.receipt_id AND ${blockFilter} AND ${{raw: contractFilter}}
+        AND ${{raw: topic1Filter}} AND ${{raw: topic2Filter}} AND ${{raw: topic3Filter}} AND ${{raw: topic4Filter}}
+      ORDER BY log._id ASC
+      LIMIT ${offset}, ${limit}
+    `, {type: db.QueryTypes.SELECT, transaction: this.ctx.transaction})).map(log => log._id)
+
+    let logs = await EVMReceiptLog.findAll({
+      where: {_id: {[$in]: ids}},
       attributes: ['topic1', 'topic2', 'topic3', 'topic4', 'data'],
       include: [
         {
-          model: Receipt,
+          model: EVMReceipt,
           as: 'receipt',
           required: true,
-          attributes: ['transactionId', 'blockHeight'],
+          attributes: ['transactionId', 'outputIndex', 'blockHeight', 'senderType', 'senderData'],
           include: [
             {
               model: Transaction,
@@ -302,18 +476,17 @@ class ContractService extends Service {
     return {
       totalCount,
       logs: logs.map(log => ({
-        blockHash: log.receipt.transaction.header.hash,
-        blockHeight: log.receipt.transaction.header.height,
-        timestamp: log.receipt.transaction.header.timestamp,
         transactionId: log.receipt.transaction.id,
-        contractAddress: log.receipt.contract.addressString,
+        outputIndex: log.receipt.outputIndex,
+        blockHeight: log.receipt.transaction.header.height,
+        blockHash: log.receipt.transaction.header.hash,
+        timestamp: log.receipt.transaction.header.timestamp,
+        sender: new Address({type: log.receipt.senderType, data: log.receipt.senderData, chain: this.app.chain}),
+        contractAddress: log.receipt.contract.address.toString('hex'),
         contractAddressHex: log.receipt.contract.address,
-        address: log.contract.addressString,
+        address: log.contract.address.toString('hex'),
         addressHex: log.contract.address,
-        topic1: log.topic1,
-        topic2: log.topic2,
-        topic3: log.topic3,
-        topic4: log.topic4,
+        topics: this.ctx.service.transaction.transformTopics(log),
         data: log.data
       }))
     }

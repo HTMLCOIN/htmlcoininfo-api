@@ -4,7 +4,7 @@ class AddressController extends Controller {
   async summary() {
     let {ctx} = this
     let {address} = ctx.state
-    let summary = await ctx.service.address.getAddressSummary(address.addressIds, address.p2pkhAddressIds, address.hexAddresses)
+    let summary = await ctx.service.address.getAddressSummary(address.addressIds, address.p2pkhAddressIds, address.rawAddresses)
     ctx.body = {
       balance: summary.balance.toString(),
       totalReceived: summary.totalReceived.toString(),
@@ -13,15 +13,20 @@ class AddressController extends Controller {
       staking: summary.staking.toString(),
       mature: summary.mature.toString(),
       hrc20Balances: summary.hrc20Balances.map(item => ({
-        address: item.address,
+        address: item.address.toString('hex'),
         addressHex: item.addressHex.toString('hex'),
         name: item.name,
         symbol: item.symbol,
         decimals: item.decimals,
-        balance: item.balance.toString()
+        balance: item.balance.toString(),
+        unconfirmed: {
+          received: item.unconfirmed.received.toString(),
+          sent: item.unconfirmed.sent.toString()
+        },
+        isUnconfirmed: item.isUnconfirmed
       })),
       hrc721Balances: summary.hrc721Balances.map(item => ({
-        address: item.address,
+        address: item.addressHex.toString('hex'),
         addressHex: item.addressHex.toString('hex'),
         name: item.name,
         symbol: item.symbol,
@@ -69,14 +74,129 @@ class AddressController extends Controller {
     ctx.body = unconfirmed.toString()
   }
 
+  async qrc20TokenBalance() {
+    let {ctx} = this
+    let {address, token} = ctx.state
+    if (token.type !== 'qrc20') {
+      ctx.body = {}
+    }
+    let {name, symbol, decimals, balance, unconfirmed} = await ctx.service.qrc20.getQRC20Balance(address.rawAddresses, token.contractAddress)
+    ctx.body = {
+      name,
+      symbol,
+      decimals,
+      balance: balance.toString(),
+      unconfirmed: {
+        received: unconfirmed.received.toString(),
+        sent: unconfirmed.sent.toString()
+      }
+    }
+  }
+
   async transactions() {
     let {ctx} = this
     let {address} = ctx.state
-    let {totalCount, transactions} = await ctx.service.address.getAddressTransactions(address.addressIds, address.hexAddresses)
+    let {totalCount, transactions} = await ctx.service.address.getAddressTransactions(address.addressIds, address.rawAddresses)
     ctx.body = {
       totalCount,
       transactions: transactions.map(id => id.toString('hex'))
     }
+  }
+
+  async basicTransactions() {
+    let {ctx} = this
+    let {totalCount, transactions} = await ctx.service.address.getAddressBasicTransactions(ctx.state.address.addressIds)
+    ctx.body = {
+      totalCount,
+      transactions: transactions.map(transaction => ({
+        id: transaction.id.toString('hex'),
+        blockHeight: transaction.blockHeight,
+        blockHash: transaction.blockHash && transaction.blockHash.toString('hex'),
+        timestamp: transaction.timestamp,
+        confirmations: transaction.confirmations,
+        amount: transaction.amount.toString(),
+        inputValue: transaction.inputValue.toString(),
+        outputValue: transaction.outputValue.toString(),
+        refundValue: transaction.refundValue.toString(),
+        fees: transaction.fees.toString(),
+        type: transaction.type
+      }))
+    }
+  }
+
+  async contractTransactions() {
+    let {ctx} = this
+    let {address, contract} = ctx.state
+    let {totalCount, transactions} = await ctx.service.address.getAddressContractTransactions(address.rawAddresses, contract)
+    ctx.body = {
+      totalCount,
+      transactions: transactions.map(transaction => ({
+        transactionId: transaction.transactionId.toString('hex'),
+        outputIndex: transaction.outputIndex,
+        blockHeight: transaction.blockHeight,
+        blockHash: transaction.blockHash && transaction.blockHash.toString('hex'),
+        timestamp: transaction.timestamp,
+        confirmations: transaction.confirmations,
+        type: transaction.scriptPubKey.type,
+        gasLimit: transaction.scriptPubKey.gasLimit,
+        gasPrice: transaction.scriptPubKey.gasPrice,
+        byteCode: transaction.scriptPubKey.byteCode.toString('hex'),
+        outputValue: transaction.value.toString(),
+        outputAddress: transaction.outputAddressHex.toString('hex'),
+        outputAddressHex: transaction.outputAddressHex.toString('hex'),
+        sender: transaction.sender.toString(),
+        gasUsed: transaction.gasUsed,
+        contractAddress: transaction.contractAddressHex.toString('hex'),
+        contractAddressHex: transaction.contractAddressHex.toString('hex'),
+        excepted: transaction.excepted,
+        exceptedMessage: transaction.exceptedMessage,
+        evmLogs: transaction.evmLogs.map(log => ({
+          address: log.addressHex.toString('hex'),
+          addressHex: log.addressHex.toString('hex'),
+          topics: log.topics.map(topic => topic.toString('hex')),
+          data: log.data.toString('hex')
+        }))
+      }))
+    }
+  }
+
+  async qrc20TokenTransactions() {
+    let {ctx} = this
+    let {address, token} = ctx.state
+    let {totalCount, transactions} = await ctx.service.address.getAddressQRC20TokenTransactions(address.rawAddresses, token)
+    ctx.body = {
+      totalCount,
+      transactions: transactions.map(transaction => ({
+        transactionId: transaction.transactionId.toString('hex'),
+        outputIndex: transaction.outputIndex,
+        blockHeight: transaction.blockHeight,
+        blockHash: transaction.blockHash.toString('hex'),
+        timestamp: transaction.timestamp,
+        confirmations: transaction.confirmations,
+        from: transaction.from,
+        fromHex: transaction.fromHex && transaction.fromHex.toString('hex'),
+        to: transaction.to,
+        toHex: transaction.toHex && transaction.toHex.toString('hex'),
+        value: transaction.value.toString(),
+        amount: transaction.amount.toString()
+      }))
+    }
+  }
+
+  async qrc20TokenMempoolTransactions() {
+    let {ctx} = this
+    let {address, token} = ctx.state
+    let transactions = await ctx.service.address.getAddressQRC20TokenMempoolTransactions(address.rawAddresses, token)
+    ctx.body = transactions.map(transaction => ({
+      transactionId: transaction.transactionId.toString('hex'),
+      outputIndex: transaction.outputIndex,
+      from: transaction.from,
+      fromHex: transaction.fromHex && transaction.fromHex.toString('hex'),
+      to: transaction.to,
+      toHex: transaction.toHex && transaction.toHex.toString('hex'),
+      value: transaction.value.toString(),
+      amount: transaction.amount.toString()
+    }))
   }
 
   async utxo() {
@@ -86,10 +206,10 @@ class AddressController extends Controller {
       transactionId: utxo.transactionId.toString('hex'),
       outputIndex: utxo.outputIndex,
       scriptPubKey: utxo.scriptPubKey.toString('hex'),
-      address: utxo.address.string,
+      address: utxo.address,
       value: utxo.value.toString(),
       isStake: utxo.isStake,
-      blockHeight: utxo.outputHeight,
+      blockHeight: utxo.blockHeight,
       confirmations: utxo.confirmations
     }))
   }
@@ -113,8 +233,24 @@ class AddressController extends Controller {
   }
 
   async hrc20BalanceHistory() {
+    const {Address} = this.app.htmlcoininfo.lib
     let {ctx} = this
-    let {totalCount, transactions} = await ctx.service.hrc20.getHRC20BalanceHistory(ctx.state.address.hexAddresses, null)
+    let tokenAddress = null
+    if (ctx.state.token) {
+      if (ctx.state.token.type === 'hrc20') {
+        tokenAddress = ctx.state.token.contractAddress
+      } else {
+        ctx.body = {
+          totalCount: 0,
+          transactions: []
+        }
+        return
+      }
+    }
+    let hexAddresses = ctx.state.address.rawAddresses
+      .filter(address => address.type === Address.PAY_TO_PUBLIC_KEY_HASH)
+      .map(address => address.data)
+    let {totalCount, transactions} = await ctx.service.hrc20.getHRC20BalanceHistory(hexAddresses, tokenAddress)
     ctx.body = {
       totalCount,
       transactions: transactions.map(tx => ({
@@ -123,7 +259,7 @@ class AddressController extends Controller {
         blockHeight: tx.block.height,
         timestamp: tx.block.timestamp,
         tokens: tx.tokens.map(item => ({
-          address: item.address,
+          address: item.addressHex.toString('hex'),
           addressHex: item.addressHex.toString('hex'),
           name: item.name,
           symbol: item.symbol,

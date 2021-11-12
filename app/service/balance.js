@@ -7,8 +7,8 @@ class BalanceService extends Service {
     let result = await TransactionOutput.aggregate('value', 'SUM', {
       where: {
         addressId: {[$in]: ids},
-        outputHeight: {[$gt]: 0},
-        inputHeight: null
+        blockHeight: {[$gt]: 0},
+        inputId: 0
       },
       transaction: this.ctx.state.transaction
     })
@@ -56,7 +56,7 @@ class BalanceService extends Service {
     let result = await TransactionOutput.aggregate('value', 'SUM', {
       where: {
         addressId: {[$in]: ids},
-        outputHeight: 0xffffffff,
+        blockHeight: 0xffffffff,
         inputHeight: null
       },
       transaction: this.ctx.state.transaction
@@ -70,7 +70,8 @@ class BalanceService extends Service {
     let result = await TransactionOutput.aggregate('value', 'SUM', {
       where: {
         addressId: {[$in]: ids},
-        outputHeight: {[$gt]: this.app.blockchainInfo.tip.height - 500},
+        blockHeight: {[$gt]: this.app.blockchainInfo.tip.height - 500},
+        inputHeight: null,
         isStake: true
       },
       transaction: this.ctx.state.transaction
@@ -84,7 +85,7 @@ class BalanceService extends Service {
     let result = await TransactionOutput.aggregate('value', 'SUM', {
       where: {
         addressId: {[$in]: ids},
-        outputHeight: {[$between]: [1, this.app.blockchainInfo.tip.height - 500]},
+        blockHeight: {[$between]: [1, this.app.blockchainInfo.tip.height - 500]},
         inputHeight: null
       },
       transaction: this.ctx.state.transaction
@@ -152,7 +153,7 @@ class BalanceService extends Service {
     } else {
       let havingFilter = nonZero ? 'SUM(value) != 0' : null
       if (havingFilter) {
-        let result = await db.query(sql`
+        let [{count}] = await db.query(sql`
           SELECT COUNT(*) AS count FROM (
             SELECT transaction_id FROM balance_change
             WHERE address_id IN ${ids} AND block_height > 0
@@ -160,7 +161,7 @@ class BalanceService extends Service {
             HAVING ${{raw: havingFilter}}
           ) list
         `, {type: db.QueryTypes.SELECT, transaction: this.ctx.state.transaction})
-        totalCount = result[0].count || 0
+        totalCount = count
       } else {
         totalCount = await BalanceChange.count({
           where: {addressId: {[$in]: ids}, blockHeight: {[$gt]: 0}},
@@ -174,11 +175,12 @@ class BalanceService extends Service {
       }
       if (havingFilter) {
         transactionIds = (await db.query(sql`
-          SELECT transaction_id AS transactionId FROM balance_change
+          SELECT MIN(block_height) AS block_height, MIN(index_in_block) AS index_in_block, transaction_id AS transactionId
+          FROM balance_change
           WHERE address_id IN ${ids} AND block_height > 0
           GROUP BY transaction_id
           HAVING ${{raw: havingFilter}}
-          ORDER BY MIN(block_height) ${{raw: order}}, MIN(index_in_block) ${{raw: order}}, transaction_id ${{raw: order}}
+          ORDER BY block_height ${{raw: order}}, index_in_block ${{raw: order}}, transaction_id ${{raw: order}}
           LIMIT ${offset}, ${limit}
         `, {type: db.QueryTypes.SELECT, transaction: this.ctx.state.transaction})).map(({transactionId}) => transactionId)
       } else {
@@ -198,11 +200,11 @@ class BalanceService extends Service {
           header.hash AS blockHash, header.timestamp AS timestamp,
           list.value AS value
         FROM (
-          SELECT transaction_id, SUM(value) AS value
+          SELECT MIN(block_height) AS block_height, MIN(index_in_block) AS index_in_block, transaction_id, SUM(value) AS value
           FROM balance_change
           WHERE transaction_id IN ${transactionIds} AND address_id IN ${ids}
           GROUP BY transaction_id
-          ORDER BY MIN(block_height) ${{raw: order}}, MIN(index_in_block) ${{raw: order}}, transaction_id ${{raw: order}}
+          ORDER BY block_height ${{raw: order}}, index_in_block ${{raw: order}}, transaction_id ${{raw: order}}
         ) list
         INNER JOIN transaction ON transaction._id = list.transaction_id
         LEFT JOIN header ON header.height = transaction.block_height
@@ -272,12 +274,12 @@ class BalanceService extends Service {
 
   async updateRichList() {
     const db = this.ctx.model
-    const {RichList} = db
+    const {Address, RichList} = db
     const {sql} = this.ctx.helper
     let transaction = await db.transaction()
     try {
       const blockHeight = this.app.blockchainInfo.tip.height
-      let [list] = await db.query(sql`
+      let list = await db.query(sql`
         SELECT list.address_id AS addressId, list.balance AS balance
         FROM (
           SELECT address_id, SUM(value) AS balance
@@ -285,13 +287,13 @@ class BalanceService extends Service {
           WHERE
             address_id > 0
             AND (input_height IS NULL OR input_height > ${blockHeight})
-            AND (output_height BETWEEN 1 AND ${blockHeight})
+            AND (block_height BETWEEN 1 AND ${blockHeight})
             AND value > 0
           GROUP BY address_id
         ) list
         INNER JOIN address ON address._id = list.address_id
-        WHERE address.type NOT IN ('contract', 'evm_contract')
-      `, {transaction})
+        WHERE address.type < ${Address.parseType('contract')}
+      `, {type: db.QueryTypes.SELECT, transaction})
       await db.query(sql`DELETE FROM rich_list`, {transaction})
       await RichList.bulkCreate(
         list.map(({addressId, balance}) => ({addressId, balance: BigInt(balance)})),
