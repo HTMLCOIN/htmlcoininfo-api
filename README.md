@@ -20,24 +20,24 @@
   * [Address Transactions](https://github.com/denuoweb/htmlcoininfo-api/blob/master/doc/address.md#Address-Transactions)
   * [Address Basic Transactions](https://github.com/denuoweb/htmlcoininfo-api/blob/master/doc/address.md#Address-Basic-Transactions)
   * [Address Contract Transactions](https://github.com/denuoweb/htmlcoininfo-api/blob/master/doc/address.md#Address-Contract-Transactions)
-  * [Address QRC20 Token Transactions](https://github.com/denuoweb/htmlcoininfo-api/blob/master/doc/address.md#Address-QRC20-Token-Transactions)
+  * [Address HRC20 Token Transactions](https://github.com/denuoweb/htmlcoininfo-api/blob/master/doc/address.md#Address-HRC20-Token-Transactions)
   * [Address UTXO List](https://github.com/denuoweb/htmlcoininfo-api/blob/master/doc/address.md#Address-UTXO-List)
   * [Address Balance History](https://github.com/denuoweb/htmlcoininfo-api/blob/master/doc/address.md#Address-Balance-History)
-  * [Address QRC20 Balance History](https://github.com/denuoweb/htmlcoininfo-api/blob/master/doc/address.md#Address-QRC20-Balance-History)
+  * [Address HRC20 Balance History](https://github.com/denuoweb/htmlcoininfo-api/blob/master/doc/address.md#Address-HRC20-Balance-History)
 * [Contract](https://github.com/denuoweb/htmlcoininfo-api/blob/master/doc/contract.md)
   * [Contract Information](https://github.com/denuoweb/htmlcoininfo-api/blob/master/doc/contract.md#Contract-Information)
   * [Contract Transactions](https://github.com/denuoweb/htmlcoininfo-api/blob/master/doc/contract.md#Contract-Transactions)
   * [Contract Basic Transactions](https://github.com/denuoweb/htmlcoininfo-api/blob/master/doc/contract.md#Contract-Basic-Transactions)
   * [Call Contract](https://github.com/denuoweb/htmlcoininfo-api/blob/master/doc/contract.md#Call-Contract)
   * [Search Logs](https://github.com/denuoweb/htmlcoininfo-api/blob/master/doc/contract.md#Search-Logs)
-* [QRC20](https://github.com/denuoweb/htmlcoininfo-api/blob/master/doc/contract.md)
-  * [QRC20 list](https://github.com/denuoweb/htmlcoininfo-api/blob/master/doc/contract.md#QRC20-list)
-  * [QRC20 Transaction list](https://github.com/denuoweb/htmlcoininfo-api/blob/master/doc/contract.md#QRC20-Transaction-list)
+* [HRC20](https://github.com/denuoweb/htmlcoininfo-api/blob/master/doc/contract.md)
+  * [HRC20 list](https://github.com/denuoweb/htmlcoininfo-api/blob/master/doc/contract.md#HRC20-list)
+  * [HRC20 Transaction list](https://github.com/denuoweb/htmlcoininfo-api/blob/master/doc/contract.md#HRC20-Transaction-list)
 
 
 ## API Endpoint
-* `https://qtum.info/api/` for mainnet
-* `https://testnet.qtum.info/api/` for testnet
+* `https://info.htmlcoin.com/api/` for mainnet
+* `https://testnetinfo.htmlcoin.com/api/` for testnet
 
 
 ## Pagination Parameters
