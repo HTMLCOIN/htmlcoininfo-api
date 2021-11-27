@@ -90,7 +90,7 @@ class MiscService extends Service {
     if (!apiKey) {
       return {}
     }
-    const coinId = 1684
+    const coinId = 2315
     let [USDResult, CNYResult] = await Promise.all([
       this.ctx.curl('https://pro-api.coinmarketcap.com/v1/cryptocurrency/quotes/latest', {
         headers: {
