@@ -43,7 +43,7 @@ class InfoService extends Service {
     let height = this.app.blockchainInfo.tip.height
     let totalSupply = this.getTotalSupply(height)
     if (this.app.chain.name === 'mainnet') {
-      return totalSupply - 575e4
+      return totalSupply - 152985e5
     } else {
       return totalSupply
     }
