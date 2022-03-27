@@ -27,9 +27,9 @@ exports.ratelimit = {
     reset: 'Rate-Limit-Reset',
     total: 'Rate-Limit-Total',
   },
-  disableHeader: false,
+  disableHeader: true,
   errorMessage: 'Rate Limit Exceeded',
-  duration: 10 * 60 * 1000,
+  duration: 10 * 60 * 500,
   max: 10 * 60
 }
 
