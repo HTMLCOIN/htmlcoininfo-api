@@ -21,7 +21,7 @@ class InfoService extends Service {
     if (height <= this.app.chain.lastPoWBlockHeight) {
       return height * 20000
     } else {
-      let supply = 8e10
+      let supply = 79800000000 + 13967176504
       let reward = 1250
       let interval = 7680000
       let stakeHeight = height - this.app.chain.lastPoWBlockHeight
@@ -36,14 +36,14 @@ class InfoService extends Service {
   }
 
   getTotalMaxSupply() {
-    return 8e10 + 7680000 * 1250 * (1 - 1 / 2 ** 7) / (1 - 1 / 2)
+    return 79800000000 + 13967176504 + 7680000 * 1250 * (1 - 1 / 2 ** 7) / (1 - 1 / 2)
   }
 
   getCirculatingSupply() {
     let height = this.app.blockchainInfo.tip.height
     let totalSupply = this.getTotalSupply(height)
     if (this.app.chain.name === 'mainnet') {
-      return totalSupply - 575e4
+      return totalSupply - 43232885602
     } else {
       return totalSupply
     }

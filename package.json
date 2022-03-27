@@ -1,6 +1,6 @@
 {
   "name": "htmlcoininfo-api",
-  "version": "0.0.0",
+  "version": "0.0.2",
   "private": true,
   "scripts": {
     "start": "egg-scripts start --title=htmlcoininfo-api --sticky --daemon",
@@ -9,20 +9,20 @@
     "lint": "eslint --ext .js app config"
   },
   "dependencies": {
-    "egg": "^2.23.0",
-    "egg-cors": "^2.2.0",
+    "egg": "^2.26.0",
+    "egg-cors": "^2.2.3",
     "egg-redis": "^2.4.0",
-    "egg-scripts": "^2.11.0",
-    "egg-sequelize": "^5.2.0",
-    "egg-socket.io": "^4.1.5",
-    "ioredis": "^4.14.1",
-    "koa-ratelimit": "^4.2.0",
-    "mysql2": "^1.7.0",
+    "egg-scripts": "^2.13.0",
+    "egg-sequelize": "^5.2.1",
+    "egg-socket.io": "^4.1.6",
+    "ioredis": "^4.16.3",
+    "koa-ratelimit": "^4.2.1",
+    "mysql2": "^2.1.0",
     "socket.io-client": "^2.3.0"
   },
   "devDependencies": {
-    "babel-eslint": "^10.0.3",
-    "egg-bin": "^4.13.1",
-    "eslint": "^6.4.0"
+    "babel-eslint": "^10.1.0",
+    "egg-bin": "^4.14.1",
+    "eslint": "^6.8.0"
   }
 }
